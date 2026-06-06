@@ -159,6 +159,11 @@
 
     .screen.active { display: block; }
 
+    .screen[data-screen="1"] .screen-body,
+    .screen[data-screen="2"] .screen-body {
+      padding-right: clamp(24px, 16vw, 176px);
+    }
+
     .screen.leaving {
       display: block;
       animation: screenOut .26s ease both;
@@ -999,7 +1004,7 @@
       position: fixed;
       left: var(--bot-x, calc(100vw - 142px));
       top: var(--bot-y, calc(100vh - 124px));
-      z-index: 30;
+      z-index: 40;
       width: 124px;
       height: 104px;
       border-radius: 28px;
@@ -1042,7 +1047,7 @@
       position: fixed;
       left: calc(var(--bot-x, calc(100vw - 142px)) + 18px);
       top: calc(var(--bot-y, calc(100vh - 124px)) + 96px);
-      z-index: 31;
+      z-index: 41;
       min-height: 30px;
       border-radius: 999px;
       padding: 0 11px;
@@ -1244,6 +1249,8 @@
       .status-pill { white-space: normal; }
       .country-grid, .form-grid, .requirement-box, .country-detail, .attribute-grid { grid-template-columns: 1fr; }
       .screen-head { flex-direction: column; }
+      .screen[data-screen="1"] .screen-body,
+      .screen[data-screen="2"] .screen-body { padding-right: 24px; padding-bottom: 132px; }
       .actions { flex-direction: column-reverse; align-items: stretch; }
       .btn { width: 100%; }
       .bot-launcher { right: 16px; bottom: 16px; }
@@ -1630,7 +1637,6 @@
     let countryDetailsCollapsed = false;
     let compliancePackage = null;
     let detectedProductFacts = null;
-    let classificationPreview = null;
     let mascotTimer;
     let mascotPaused = false;
     let draggingMascot = false;
@@ -1655,7 +1661,7 @@
     }
 
     function hasDetectedProduct() {
-      return Boolean(compliancePackage || classificationPreview || detectedProductFacts);
+      return Boolean(compliancePackage || detectedProductFacts);
     }
 
     function money(value) {
@@ -1841,80 +1847,15 @@
       return detectedProductFacts;
     }
 
-    async function runClassificationPreview(facts) {
-      const response = await fetch(`${API_BASE}/api/classification-preview`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          product_confirmed: true,
-          product_facts: facts,
-          destination_country: selectedCountry
-        })
-      });
-      if (!response.ok) {
-        let message = "Classification preview failed.";
-        try {
-          const error = await response.json();
-          message = error.detail || message;
-        } catch {
-          message = response.statusText || message;
-        }
-        throw new Error(message);
-      }
-      return response.json();
-    }
-
-    function localClassificationPreview(facts, reason) {
-      const p = products[facts.category] || {};
-      return {
-        workflow_status: "human_review_required",
-        product_facts: facts,
-        classification: {
-          hs6: p.hs || "",
-          local_code: "",
-          description: p.description || facts.label || "",
-          rationale: "Local fallback used because the backend classification preview agent was unavailable.",
-          confidence: facts.confidence || 0,
-          source_ids: [],
-          alternatives: []
-        },
-        restricted_goods: {
-          status: "unknown",
-          requirements: [],
-          certification_bodies: [],
-          source_ids: [],
-          notes: [reason]
-        },
-        evidence_pack: [],
-        critic: {
-          status: "human_review_required",
-          issues: [reason, "HS code is filled from local category mapping and must be verified by the backend agent."],
-          checks: []
-        }
-      };
-    }
-
-    async function ensureClassificationPreview() {
-      if (classificationPreview) return classificationPreview;
-      const facts = detectedProductFacts || await identifyProductFromPhoto();
-      try {
-        classificationPreview = await runClassificationPreview(facts);
-      } catch (error) {
-        classificationPreview = localClassificationPreview(facts, error.message);
-      }
-      compliancePackage = null;
-      renderAll();
-      const sourceLabel = classificationPreview.evidence_pack.length ? "classification agent" : "local fallback";
-      addBubble("agent", `HS code filled by ${sourceLabel}: ${classificationPreview.classification.hs6 || "not available"}. Critic status: ${classificationPreview.critic.status}.`);
-      return classificationPreview;
-    }
-
     async function analyzePhotoForForm() {
       const button = document.getElementById("runBackendCheck");
       button.disabled = true;
       button.textContent = "Analyzing photo...";
       try {
-        return await ensureClassificationPreview();
+        const facts = await identifyProductFromPhoto();
+        compliancePackage = null;
+        renderAll();
+        return facts;
       } catch (error) {
         addBubble("agent", `Photo analysis stopped: ${error.message}`);
         document.getElementById("criticSummary").textContent = error.message;
@@ -1993,9 +1934,6 @@
       if (compliancePackage?.restricted_goods?.certification_bodies?.length) {
         return compliancePackage.restricted_goods.certification_bodies.join(" / ");
       }
-      if (classificationPreview?.restricted_goods?.certification_bodies?.length) {
-        return classificationPreview.restricted_goods.certification_bodies.join(" / ");
-      }
       if (!hasDetectedProduct()) return "No product detected yet";
       return countries[selectedCountry].cert;
     }
@@ -2008,10 +1946,26 @@
       chatLog.scrollTop = chatLog.scrollHeight;
     }
 
-    function initDolphins() {
+    function ensureDolphins() {
       const template = document.getElementById("dolphinTemplate").innerHTML.trim();
-      document.querySelectorAll("[data-dolphin]").forEach(node => {
-        node.innerHTML = template;
+      document.querySelectorAll("[data-dolphin]").forEach((node, index) => {
+        if (!node.querySelector("svg")) {
+          const suffix = `dolphin${index}`;
+          let dolphinSvg = template;
+          [
+            "soft3dShadow",
+            "redBand",
+            "orangeBand",
+            "greenBand",
+            "cyanBand",
+            "blueBand",
+            "belly",
+            "bodyHighlight"
+          ].forEach(id => {
+            dolphinSvg = dolphinSvg.replaceAll(id, `${id}-${suffix}`);
+          });
+          node.innerHTML = dolphinSvg;
+        }
       });
     }
 
@@ -2029,6 +1983,15 @@
       const y = maxY;
       botLauncher.style.setProperty("--bot-x", `${x}px`);
       botLauncher.style.setProperty("--bot-y", `${y}px`);
+    }
+
+    function dockMascotCorner() {
+      const x = Math.max(16, window.innerWidth - 150);
+      const y = Math.max(92, window.innerHeight - 132);
+      botLauncher.style.setProperty("--bot-x", `${x}px`);
+      botLauncher.style.setProperty("--bot-y", `${y}px`);
+      document.getElementById("pauseMascotFloating").style.setProperty("--bot-x", `${x}px`);
+      document.getElementById("pauseMascotFloating").style.setProperty("--bot-y", `${y}px`);
     }
 
     function startMascotWander() {
@@ -2073,6 +2036,7 @@
       routeBanner.classList.toggle("visible", step > 0);
       document.getElementById("routeText").textContent = `${selectedCountry || "Market"} selected`;
       document.getElementById("routeStage").textContent = labels[step];
+      dockMascotCorner();
       renderAll();
     }
 
@@ -2082,13 +2046,8 @@
         chatPanel.classList.add("open");
         return;
       }
-      const titles = ["", "Filling customs clearance form", "Filling customs clearance form", "Preparing document pack"];
-      const copies = [
-        "",
-        `Using AI-detected product facts and ${selectedCountry} customs fields.`,
-        `Using AI-detected product facts and ${certificateName()} fields.`,
-        "Bringing all submission files into your program."
-      ];
+      const titles = ["", "Collecting product evidence", "Filling customs clearance form", "Preparing document pack"];
+      const copies = ["", `Please describe the product and upload a photo for ${selectedCountry}.`, `Using AI-detected product facts and ${certificateName()} fields.`, "Bringing all submission files into your program."];
       document.getElementById("transitionTitle").textContent = titles[nextStep] || "Opening next step";
       document.getElementById("transitionCopy").textContent = copies[nextStep] || "TradeReady is preparing the next screen.";
       document.getElementById("destinationBubble").textContent = countries[selectedCountry]?.code || "GO";
@@ -2164,7 +2123,7 @@
 
     function renderCertificate() {
       if (!selectedCountry) return;
-      const restriction = compliancePackage?.restricted_goods || classificationPreview?.restricted_goods;
+      const restriction = compliancePackage?.restricted_goods;
       const tag = document.getElementById("certificateTag");
       if (!hasDetectedProduct()) {
         if (tag) tag.textContent = "Waiting for photo";
@@ -2180,25 +2139,17 @@
         return;
       }
       const p = product();
-      if (tag) tag.textContent = compliancePackage ? "Requirement found" : classificationPreview ? "HS verified" : "Photo detected";
+      if (tag) tag.textContent = compliancePackage ? "Requirement found" : "Photo detected";
       document.getElementById("certificateTitle").textContent = certificateName();
       document.getElementById("certificateCopy").textContent = compliancePackage
         ? `${p.name} entering ${selectedCountry}. Status: ${restriction.status}. ${restriction.requirements.join(" ")}`
-        : classificationPreview
-          ? `${p.name} entering ${selectedCountry}. HS code ${classificationPreview.classification.hs6} was filled by the classification agent. Critic status: ${classificationPreview.critic.status}.`
-          : `${p.name} was detected by OpenAI vision. Run the classification agent to fill HS code for ${selectedCountry}.`;
+        : `${p.name} was detected by OpenAI vision. Run the compliance check to generate source-backed customs requirements for ${selectedCountry}.`;
       const checklist = compliancePackage ? [
         `Product signal: ${p.signal}`,
         `HS code: ${compliancePackage.classification.hs6}`,
         `Local tariff code: ${compliancePackage.classification.local_code}`,
         `Critic status: ${compliancePackage.critic.status}`,
         `Evidence sources: ${compliancePackage.evidence_pack.length}`
-      ] : classificationPreview ? [
-        `Detected product: ${detectedProductFacts.label || p.name}`,
-        `HS code: ${classificationPreview.classification.hs6}`,
-        `Local tariff code: ${classificationPreview.classification.local_code}`,
-        `Classification critic: ${classificationPreview.critic.status}`,
-        `Evidence sources: ${classificationPreview.evidence_pack.length}`
       ] : [
         `Detected product: ${detectedProductFacts.label || p.name}`,
         `Detected category: ${detectedProductFacts.category}`,
@@ -2216,23 +2167,14 @@
       if (!compliancePackage) {
         document.getElementById("productName").value = detectedProductFacts?.label || "";
         document.getElementById("productCategory").value = detectedProductFacts?.category || "";
-        document.getElementById("certificateType").value = classificationPreview ? certificateName() : "";
-        document.getElementById("hsCode").value = classificationPreview?.classification?.hs6 || "";
-        document.getElementById("localTariffCode").value = classificationPreview?.classification?.local_code || "";
+        document.getElementById("certificateType").value = "";
+        document.getElementById("hsCode").value = "";
+        document.getElementById("localTariffCode").value = "";
         document.getElementById("productDescription").value = detectedProductFacts
-          ? (classificationPreview?.classification?.description || document.getElementById("productDescriptionInput")?.value.trim() || detectedProductFacts.label || "")
+          ? (document.getElementById("productDescriptionInput")?.value.trim() || detectedProductFacts.label || "")
           : "";
-        document.getElementById("calculatedFieldsSummary").textContent = classificationPreview
-          ? [
-              `HS classification: ${classificationPreview.classification.hs6}`,
-              `Local tariff code: ${classificationPreview.classification.local_code}`,
-              `Classification critic: ${classificationPreview.critic.status}`,
-              `Checks: ${classificationPreview.critic.checks.join("; ") || "No checks returned"}`,
-              classificationPreview.critic.issues.length ? `Issues: ${classificationPreview.critic.issues.join("; ")}` : "Issues: none",
-              `Evidence: ${classificationPreview.evidence_pack.map(item => item.source_name).join(" | ") || "No evidence returned"}`
-            ].join("\n")
-          : detectedProductFacts
-            ? "Photo detection completed. Fill shipment fields, then click Next to run the compliance check."
+        document.getElementById("calculatedFieldsSummary").textContent = detectedProductFacts
+          ? "Photo detection completed. Fill shipment fields, then click Next to run the compliance check."
           : "Upload a photo and run detection before customs fields are filled.";
         return;
       }
@@ -2300,8 +2242,8 @@
     function renderDocs() {
       if (!selectedCountry) return;
       const fields = compliancePackage?.auto_filled_fields?.fields || {};
-      const classification = compliancePackage?.classification || classificationPreview?.classification || {};
-      const restriction = compliancePackage?.restricted_goods || classificationPreview?.restricted_goods || {};
+      const classification = compliancePackage?.classification || {};
+      const restriction = compliancePackage?.restricted_goods || {};
       const productName = document.getElementById("productName")?.value || detectedProductFacts?.label || "";
       const productDescription = document.getElementById("productDescription")?.value || document.getElementById("productDescriptionInput")?.value || productName;
       const originCountry = document.getElementById("originCountry")?.value || fields.origin_country || "";
@@ -2526,21 +2468,7 @@
       const issues = document.getElementById("criticIssues");
       if (!summary || !issues) return;
       if (!compliancePackage) {
-        if (classificationPreview) {
-          summary.textContent = [
-            `Classification preview: ${classificationPreview.workflow_status}`,
-            `Critic: ${classificationPreview.critic.status}`,
-            `HS code: ${classificationPreview.classification.hs6}`,
-            `Local tariff code: ${classificationPreview.classification.local_code}`,
-            `Checks: ${classificationPreview.critic.checks.join("; ") || "No checks returned"}`,
-            `Evidence: ${classificationPreview.evidence_pack.map(item => item.source_name).join(" | ") || "No evidence returned"}`
-          ].join("\n");
-          issues.innerHTML = classificationPreview.critic.issues.length
-            ? classificationPreview.critic.issues.map(issue => `<div>${issue}</div>`).join("")
-            : `<div style="border-color:#cfead9;background:#f0fbf5;color:#146c43;">Classification output verified. Fill shipment fields to run full compliance.</div>`;
-          return;
-        }
-        summary.textContent = "Run photo analysis to fill HS code, then run the AI compliance check to validate evidence and calculations.";
+        summary.textContent = "Run the AI compliance check to validate evidence and calculations.";
         issues.innerHTML = "";
         return;
       }
@@ -2556,6 +2484,7 @@
     }
 
     function renderAll() {
+      ensureDolphins();
       renderCountries();
       renderTax();
       renderCertificate();
@@ -2570,7 +2499,6 @@
       countryDetailsCollapsed = true;
       compliancePackage = null;
       detectedProductFacts = null;
-      classificationPreview = null;
       setDetectedProductSummary("Upload a photo and process it to see the OpenAI vision result.");
       updateBackendDefaultsForDestination();
       syncShipmentText();
@@ -2585,9 +2513,9 @@
     });
 
     document.querySelectorAll("[data-next]").forEach(button => button.addEventListener("click", async () => {
-      if (step === 1 && !classificationPreview) {
-        const preview = await analyzePhotoForForm();
-        if (!preview) return;
+      if (step === 1 && !detectedProductFacts) {
+        const facts = await analyzePhotoForForm();
+        if (!facts) return;
       }
       if (step === 2) {
         const result = await runComplianceCheck();
@@ -2600,7 +2528,6 @@
     document.getElementById("productType").addEventListener("change", () => {
       detectedProductFacts = null;
       compliancePackage = null;
-      classificationPreview = null;
       syncShipmentText();
       renderAll();
       addBubble("agent", `Product changed to ${product().name}. I refreshed certificate and document requirements.`);
@@ -2609,7 +2536,6 @@
       document.getElementById(id).addEventListener("input", () => {
         if (id === "productDescriptionInput") {
           detectedProductFacts = null;
-          classificationPreview = null;
           setDetectedProductSummary("Product description changed. Analyze the photo again before continuing.");
         }
         compliancePackage = null;
@@ -2619,7 +2545,6 @@
       document.getElementById(id).addEventListener("change", () => {
         if (id === "productDescriptionInput") {
           detectedProductFacts = null;
-          classificationPreview = null;
           setDetectedProductSummary("Product description changed. Analyze the photo again before continuing.");
         }
         compliancePackage = null;
@@ -2634,7 +2559,6 @@
       const file = event.target.files?.[0];
       detectedProductFacts = null;
       compliancePackage = null;
-      classificationPreview = null;
       const preview = document.getElementById("photoPreview");
       if (!file) {
         preview.textContent = "Upload a product photo to run OpenAI vision detection.";
@@ -2774,7 +2698,7 @@
       window.print();
     });
 
-    initDolphins();
+    ensureDolphins();
     syncShipmentText();
     checkBackendHealth();
     renderAll();
