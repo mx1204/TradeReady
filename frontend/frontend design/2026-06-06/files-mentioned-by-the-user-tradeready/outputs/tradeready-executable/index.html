@@ -682,22 +682,105 @@
 
     .doc-list {
       display: grid;
-      gap: 10px;
+      gap: 22px;
     }
 
     .doc {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 14px;
-      align-items: center;
+      display: block;
       border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 14px;
+      border-radius: 4px;
+      padding: 22px;
       background: #fff;
+      page-break-after: always;
+      break-inside: avoid;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, .05);
     }
 
-    .doc b { display: block; margin-bottom: 4px; }
-    .doc span { color: var(--muted); font-size: 13px; }
+    .doc-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      border-bottom: 2px solid #222;
+      padding-bottom: 12px;
+      margin-bottom: 14px;
+    }
+
+    .doc-title {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .doc-meta {
+      color: #4b5563;
+      font-size: 12px;
+      text-align: right;
+      line-height: 1.5;
+    }
+
+    .doc-section-title {
+      margin: 16px 0 8px;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0;
+      color: #111;
+    }
+
+    .doc-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      margin-bottom: 12px;
+      font-size: 12px;
+    }
+
+    .doc-table th,
+    .doc-table td {
+      border: 1px solid #222;
+      padding: 8px;
+      text-align: left;
+      vertical-align: top;
+      min-height: 30px;
+      word-break: break-word;
+    }
+
+    .doc-table th {
+      width: 28%;
+      background: #f3f4f6;
+      font-weight: 800;
+    }
+
+    .doc-table .center { text-align: center; }
+    .doc-table .right { text-align: right; }
+
+    .doc-table td:empty::after {
+      content: "\00a0";
+    }
+
+    .doc-note {
+      border: 1px solid #d1d5db;
+      background: #f9fafb;
+      padding: 10px;
+      color: #374151;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .signature-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-top: 28px;
+    }
+
+    .signature-line {
+      border-top: 1px solid #222;
+      padding-top: 7px;
+      font-size: 12px;
+      color: #374151;
+    }
 
     .doc-state {
       color: var(--green);
@@ -707,6 +790,41 @@
       font-size: 12px;
       font-weight: 800;
       white-space: nowrap;
+    }
+
+    @media print {
+      body { background: #fff; }
+      .topbar,
+      .route-banner,
+      .screen:not([data-screen="3"]),
+      .screen[data-screen="3"] .screen-head,
+      .screen[data-screen="3"] .actions,
+      .bot-launcher,
+      .mascot-control,
+      .chat-panel,
+      .transition-layer {
+        display: none !important;
+      }
+      main, .screen, .screen-body {
+        max-width: none;
+        padding: 0;
+        margin: 0;
+        box-shadow: none;
+        border: 0;
+      }
+      .screen[data-screen="3"] {
+        display: block !important;
+      }
+      .doc {
+        border-radius: 0;
+        border: 0;
+        box-shadow: none;
+        padding: 18mm;
+        min-height: auto;
+      }
+      .doc:not(:last-child) {
+        page-break-after: always;
+      }
     }
 
     .api-strip {
@@ -2134,20 +2252,272 @@
       ].filter(Boolean).join("\n") || "No calculated fields returned.";
     }
 
+    function displayValue(value) {
+      return value === undefined || value === null ? "" : String(value);
+    }
+
+    function escapeHtml(value) {
+      return displayValue(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function formatDocumentMoney(value, currency) {
+      if (value === "" || value === undefined || value === null || Number.isNaN(Number(value))) return "";
+      return `${currency || ""} ${Number(value).toFixed(2)}`.trim();
+    }
+
+    function documentRows(rows) {
+      return rows.map(([label, value]) => `
+        <tr>
+          <th>${escapeHtml(label)}</th>
+          <td>${escapeHtml(value)}</td>
+        </tr>
+      `).join("");
+    }
+
+    function documentSheet(title, state, metaRows, body, note = "") {
+      return `
+        <article class="doc">
+          <div class="doc-header">
+            <div>
+              <h3 class="doc-title">${escapeHtml(title)}</h3>
+              <span class="doc-state">${escapeHtml(state)}</span>
+            </div>
+            <div class="doc-meta">
+              ${metaRows.map(row => `<div>${escapeHtml(row)}</div>`).join("")}
+            </div>
+          </div>
+          ${body}
+          ${note ? `<div class="doc-note">${escapeHtml(note)}</div>` : ""}
+        </article>
+      `;
+    }
+
     function renderDocs() {
       if (!selectedCountry) return;
-      const docs = compliancePackage ? compliancePackage.documents_required.map(doc => [
-        doc.name,
-        `${doc.purpose} Source: ${doc.source_ids.join(", ")}`
-      ]) : [
-        ["Waiting for compliance package", "Upload a photo, run OpenAI vision detection, then run the source-backed compliance check."]
+      const fields = compliancePackage?.auto_filled_fields?.fields || {};
+      const classification = compliancePackage?.classification || classificationPreview?.classification || {};
+      const restriction = compliancePackage?.restricted_goods || classificationPreview?.restricted_goods || {};
+      const productName = document.getElementById("productName")?.value || detectedProductFacts?.label || "";
+      const productDescription = document.getElementById("productDescription")?.value || document.getElementById("productDescriptionInput")?.value || productName;
+      const originCountry = document.getElementById("originCountry")?.value || fields.origin_country || "";
+      const destinationCountry = selectedCountry || fields.destination_country || "";
+      const sellerName = document.getElementById("sellerName")?.value || fields.seller_name || "";
+      const buyerName = document.getElementById("consigneeName")?.value || fields.consignee_name || "";
+      const quantity = document.getElementById("quantity")?.value || fields.quantity || "";
+      const unitValue = document.getElementById("unitValue")?.value || fields.unit_value || "";
+      const currency = document.getElementById("currency")?.value || fields.currency || "";
+      const customsValue = fields.customs_value ?? "";
+      const hsCode = document.getElementById("hsCode")?.value || fields.hs6 || classification.hs6 || "";
+      const localCode = document.getElementById("localTariffCode")?.value || fields.local_tariff_code || classification.local_code || "";
+      const totalValue = quantity && unitValue && !Number.isNaN(Number(quantity) * Number(unitValue)) ? Number(quantity) * Number(unitValue) : "";
+      const certBodies = Array.isArray(restriction.certification_bodies) ? restriction.certification_bodies.join(" / ") : "";
+      const invoiceNumber = document.getElementById("invoiceNumber")?.value || fields.invoice_number || "";
+      const productCode = localCode || hsCode;
+      const generatedDate = new Date().toLocaleDateString("en-SG", { year: "numeric", month: "short", day: "2-digit" });
+      const meta = [
+        invoiceNumber ? `Invoice no: ${invoiceNumber}` : "Invoice no:",
+        `Generated: ${generatedDate}`,
+        `Destination: ${destinationCountry}`
       ];
-      document.getElementById("docList").innerHTML = docs.map(([name, copy]) => `
-        <article class="doc">
-          <div><b>${name}</b><span>${copy}</span></div>
-          <i class="doc-state">Ready</i>
-        </article>
-      `).join("");
+      const officialStyleNote = "Prepared as a submission-ready worksheet from user-provided shipment details and TradeReady compliance evidence. Empty fields require user or broker input before submission.";
+
+      const commercialInvoice = documentSheet(
+        "Commercial Invoice",
+        compliancePackage ? "Ready for review" : "Draft",
+        meta,
+        `
+          <div class="doc-section-title">Exporter and Importer</div>
+          <table class="doc-table">
+            <tbody>${documentRows([
+              ["Seller / Exporter", sellerName],
+              ["Buyer / Importer", buyerName],
+              ["Country of Export", originCountry],
+              ["Destination Country", destinationCountry],
+              ["Currency", currency]
+            ])}</tbody>
+          </table>
+          <div class="doc-section-title">Goods and Valuation</div>
+          <table class="doc-table">
+            <thead>
+              <tr>
+                <th class="center">No.</th>
+                <th>Description of Goods</th>
+                <th>HS / AHTN Code</th>
+                <th>Origin</th>
+                <th class="center">Quantity</th>
+                <th class="right">Unit Price</th>
+                <th class="right">Total Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="center">1</td>
+                <td>${escapeHtml(productDescription || productName)}</td>
+                <td>${escapeHtml(productCode)}</td>
+                <td>${escapeHtml(originCountry)}</td>
+                <td class="center">${escapeHtml(quantity)}</td>
+                <td class="right">${escapeHtml(formatDocumentMoney(unitValue, currency))}</td>
+                <td class="right">${escapeHtml(formatDocumentMoney(totalValue, currency))}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="doc-section-title">Customs Value</div>
+          <table class="doc-table">
+            <tbody>${documentRows([
+              ["Invoice Total", formatDocumentMoney(totalValue, currency)],
+              ["Customs Value", formatDocumentMoney(customsValue, currency)],
+              ["Remarks", ""]
+            ])}</tbody>
+          </table>
+          <div class="signature-grid">
+            <div class="signature-line">Prepared by / Signature</div>
+            <div class="signature-line">Company stamp / Date</div>
+          </div>
+        `,
+        officialStyleNote
+      );
+
+      const packingList = documentSheet(
+        "Packing List",
+        "Needs user input",
+        meta,
+        `
+          <div class="doc-section-title">Shipment Parties</div>
+          <table class="doc-table">
+            <tbody>${documentRows([
+              ["Seller / Shipper", sellerName],
+              ["Consignee / Buyer", buyerName],
+              ["Country of Export", originCountry],
+              ["Destination Country", destinationCountry]
+            ])}</tbody>
+          </table>
+          <div class="doc-section-title">Package Details</div>
+          <table class="doc-table">
+            <thead>
+              <tr>
+                <th class="center">Carton No.</th>
+                <th>Product / Model</th>
+                <th class="center">Quantity per Carton</th>
+                <th class="center">Total Quantity</th>
+                <th class="center">Gross Weight</th>
+                <th class="center">Net Weight</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="center"></td>
+                <td>${escapeHtml(productName)}</td>
+                <td class="center"></td>
+                <td class="center">${escapeHtml(quantity)}</td>
+                <td class="center"></td>
+                <td class="center"></td>
+              </tr>
+            </tbody>
+          </table>
+          <table class="doc-table">
+            <tbody>${documentRows([
+              ["Number of Cartons", ""],
+              ["Model Numbers", productName],
+              ["Package Marks / Numbers", ""]
+            ])}</tbody>
+          </table>
+        `,
+        officialStyleNote
+      );
+
+      const transportDocument = documentSheet(
+        "Transport Document",
+        "Needs user input",
+        meta,
+        `
+          <div class="doc-section-title">Routing</div>
+          <table class="doc-table">
+            <tbody>${documentRows([
+              ["Shipper", sellerName],
+              ["Consignee", buyerName],
+              ["Country of Export", originCountry],
+              ["Destination Country", destinationCountry],
+              ["Shipment Method", ""]
+            ])}</tbody>
+          </table>
+          <div class="doc-section-title">Transport Reference</div>
+          <table class="doc-table">
+            <tbody>${documentRows([
+              ["Air Waybill (AWB)", ""],
+              ["Bill of Lading (BL)", ""],
+              ["Courier Tracking / Shipping Documentation", ""],
+              ["Freight Forwarder / Courier", ""],
+              ["Flight / Vessel / Vehicle No.", ""]
+            ])}</tbody>
+          </table>
+        `,
+        "Attach the final AWB, BL, or courier shipping document from the logistics provider before customs clearance."
+      );
+
+      const imdaDocument = documentSheet(
+        "IMDA Telecommunication Requirements",
+        destinationCountry === "Singapore" ? "Review required" : "Destination dependent",
+        meta,
+        `
+          <div class="doc-section-title">Telecommunication Equipment Check</div>
+          <table class="doc-table">
+            <tbody>${documentRows([
+              ["Destination Authority", destinationCountry === "Singapore" ? "IMDA" : certBodies],
+              ["Detected Product", productName],
+              ["Telecommunication / Wireless Equipment", detectedProductFacts?.wireless ? "Yes" : ""],
+              ["HS / AHTN Code", productCode],
+              ["IMDA Telecommunication Dealer's Licence", ""],
+              ["Equipment Registration / Registered Model Confirmation", ""],
+              ["TradeNet Licence Number Declaration", ""]
+            ])}</tbody>
+          </table>
+        `,
+        "For commercial importation or resale into Singapore, complete licence and equipment-registration fields before submitting the TradeNet permit."
+      );
+
+      const tradeNetDocument = documentSheet(
+        "TradeNet Declaration Information",
+        destinationCountry === "Singapore" ? "Draft" : "Reference",
+        meta,
+        `
+          <div class="doc-section-title">Importer and Product Declaration</div>
+          <table class="doc-table">
+            <tbody>${documentRows([
+              ["Importer's UEN", ""],
+              ["HS / AHTN Code", productCode],
+              ["Country of Origin", originCountry],
+              ["Country of Export", originCountry],
+              ["Destination Country", destinationCountry],
+              ["Customs Value", formatDocumentMoney(customsValue, currency)],
+              ["Quantity", quantity],
+              ["Currency", currency],
+              ["IMDA Product Code / Licence Information", ""]
+            ])}</tbody>
+          </table>
+          <div class="doc-section-title">Permit Filing Notes</div>
+          <table class="doc-table">
+            <tbody>${documentRows([
+              ["Permit System", destinationCountry === "Singapore" ? "TradeNet" : ""],
+              ["Supporting Documents", "Commercial invoice, packing list, transport document"],
+              ["Human Review Required", compliancePackage?.critic?.status === "pass" ? "No" : "Yes"]
+            ])}</tbody>
+          </table>
+        `,
+        "Use this worksheet to transfer verified fields into the destination customs permit system. Do not submit blank mandatory fields."
+      );
+
+      document.getElementById("docList").innerHTML = [
+        commercialInvoice,
+        packingList,
+        transportDocument,
+        imdaDocument,
+        tradeNetDocument
+      ].join("");
     }
 
 
