@@ -138,7 +138,7 @@ def document_agent(
         else "Import declaration data"
     )
     fields = {
-        "invoice_number": shipment.invoice_number or f"TR-{run_id[:8].upper()}",
+        "invoice_number": shipment.invoice_number,
         "product_description": product_facts.label or product_facts.category,
         "hs6": classification.hs6,
         "local_tariff_code": classification.local_code,

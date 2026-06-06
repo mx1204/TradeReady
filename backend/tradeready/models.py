@@ -48,7 +48,7 @@ class ShipmentDetails(BaseModel):
     destination_country: str
     quantity: int | None = Field(default=None, ge=1)
     unit_value: float | None = Field(default=None, ge=0)
-    currency: str = "SGD"
+    currency: str | None = None
     seller_name: str | None = None
     consignee_name: str | None = None
     invoice_number: str | None = None

@@ -7,7 +7,8 @@ FastAPI backend for the Malaysia <-> Singapore electronics compliance demo.
 - `POST /api/product-identification`
   - Accepts a product image.
   - Uses OpenAI vision when `OPENAI_API_KEY` and the `openai` package are available.
-  - Falls back to filename or optional `hint` matching for hackathon demo reliability.
+  - The merged frontend calls this with `require_vision=true`, so it shows an error instead of demo fallback results when the key/model is not working.
+  - Swagger/manual calls can omit `require_vision` to use filename or optional `hint` matching for backend-only demo reliability.
   - Returns product facts and asks the frontend to confirm the detected product.
 
 - `POST /api/compliance-runs`
@@ -69,7 +70,7 @@ The launcher automatically loads `.env` into the FastAPI backend. When you uploa
 POST /api/product-identification
 ```
 
-Then the backend uses `OPENAI_API_KEY` to call OpenAI vision. If `.env` is missing or the key is invalid, the app still runs and falls back to the product description/hint path for demo reliability.
+Then the backend uses `OPENAI_API_KEY` to call OpenAI vision. In the merged website, photo detection is strict: if `.env` is missing, the key is invalid, or the model call fails, the UI shows an error instead of showing a demo/default product result.
 
 For the merged UI + backend demo:
 
@@ -93,7 +94,7 @@ $env:OPENAI_API_KEY="sk-..."
 python -m uvicorn backend.tradeready.main:app --reload --port 8000
 ```
 
-The backend works without `OPENAI_API_KEY`; product identification then uses the uploaded filename or `hint` form field.
+The backend can still work without `OPENAI_API_KEY` for manual Swagger testing when `require_vision` is omitted; product identification then uses the uploaded filename or `hint` form field. The website sends `require_vision=true`, so it needs a valid backend API key for photo analysis.
 
 ## Demo Request
 

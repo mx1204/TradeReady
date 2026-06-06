@@ -46,11 +46,14 @@ async def identify_product(
     content_type: str | None = None,
     filename: str | None = None,
     hint: str | None = None,
-) -> ProductIdentificationResponse:
+    require_vision: bool = False,
+) -> ProductIdentificationResponse | None:
     if os.getenv("OPENAI_API_KEY"):
         response = await _identify_with_openai(image_bytes, content_type)
         if response:
             return response
+    if require_vision:
+        return None
     return identify_from_text(" ".join(filter(None, [filename, hint])))
 
 

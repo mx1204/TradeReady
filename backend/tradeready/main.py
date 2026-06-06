@@ -30,16 +30,27 @@ def health() -> dict[str, str]:
 async def product_identification(
     image: Annotated[UploadFile, File(...)],
     hint: Annotated[str | None, Form()] = None,
+    require_vision: Annotated[bool, Form()] = False,
 ):
     image_bytes = await image.read()
     if not image_bytes:
         raise HTTPException(status_code=422, detail="Uploaded image is empty.")
-    return await identify_product(
+    result = await identify_product(
         image_bytes=image_bytes,
         content_type=image.content_type,
         filename=image.filename,
         hint=hint,
+        require_vision=require_vision,
     )
+    if result is None:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "OpenAI vision did not return a usable product detection. "
+                "Check OPENAI_API_KEY and OPENAI_VISION_MODEL, then retry with a product photo."
+            ),
+        )
+    return result
 
 
 @app.post("/api/compliance-runs")

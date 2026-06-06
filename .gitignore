@@ -11,3 +11,4 @@ venv/
 !.env.example
 dist/
 build/
+OpenAI hackathon note.txt

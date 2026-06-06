@@ -28,9 +28,9 @@ def normalize_country(value: str | None) -> str | None:
     return COUNTRY_ALIASES.get(value.strip().lower())
 
 
-def normalize_currency(value: str | None) -> str:
+def normalize_currency(value: str | None) -> str | None:
     if not value:
-        return "SGD"
+        return None
     return CURRENCY_ALIASES.get(value.strip().upper(), value.strip().upper())
 
 
@@ -108,7 +108,7 @@ def _parse_quantity(lower: str) -> int | None:
     return None
 
 
-def _parse_unit_value(text: str) -> tuple[float | None, str]:
+def _parse_unit_value(text: str) -> tuple[float | None, str | None]:
     patterns = [
         r"\b(SGD|MYR|USD|RM|S\$|\$)\s*(\d+(?:\.\d+)?)\s*(?:each|per unit|\/unit|unit price)?\b",
         r"\b(?:unit value|unit price|price)\s*[:=]?\s*(SGD|MYR|USD|RM|S\$|\$)?\s*(\d+(?:\.\d+)?)\b",
@@ -126,7 +126,7 @@ def _parse_unit_value(text: str) -> tuple[float | None, str]:
             currency = normalize_currency(groups[0])
             value = float(groups[1])
         return value, currency
-    return None, "SGD"
+    return None, None
 
 
 def _parse_route(lower: str) -> tuple[str | None, str | None]:
