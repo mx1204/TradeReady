@@ -1,0 +1,14 @@
+{
+  "product_confirmed": true,
+  "product_facts": {
+    "category": "wireless_earbuds",
+    "label": "Wireless earbuds",
+    "wireless": true,
+    "battery": true,
+    "mains_powered": false,
+    "confidence": 0.91,
+    "confirmed": true
+  },
+  "destination_country": "Malaysia",
+  "shipment_text": "200 units wireless earbuds, SGD 45 each, shipping Singapore to Malaysia, invoice TR-001, seller: Jason Store, consignee: KL Buyer"
+}

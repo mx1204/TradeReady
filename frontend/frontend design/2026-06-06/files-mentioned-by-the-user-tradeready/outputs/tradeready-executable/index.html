@@ -1,0 +1,2033 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TradeReady</title>
+  <style>
+    :root {
+      --shop: #ee4d2d;
+      --shop-dark: #d63f21;
+      --ink: #222;
+      --muted: #6b7280;
+      --line: #e8e8e8;
+      --soft: #f6f7f9;
+      --card: #fff;
+      --green: #20b26b;
+      --amber: #f5a524;
+      --blue: #2f80ed;
+      --shadow: 0 14px 40px rgba(0, 0, 0, .08);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #f5f5f5;
+      color: var(--ink);
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button { border: 0; cursor: pointer; }
+
+    .topbar {
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 0 clamp(16px, 3vw, 40px);
+      background: #fff;
+      border-bottom: 1px solid var(--line);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .bag {
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: var(--shop);
+      font-weight: 900;
+      box-shadow: 0 8px 20px rgba(238, 77, 45, .22);
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { font-size: 20px; margin: 0; letter-spacing: 0; }
+    .brand small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      background: #fff7f4;
+      border: 1px solid #ffd8cf;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--shop);
+      animation: pulse 1.8s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(238, 77, 45, .35); }
+      70% { box-shadow: 0 0 0 10px rgba(238, 77, 45, 0); }
+    }
+
+    main {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      padding: clamp(18px, 4vw, 42px) 16px 120px;
+    }
+
+    .route-banner {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      color: var(--muted);
+      overflow: hidden;
+    }
+
+    .route-banner.visible { display: flex; }
+
+    .route-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      background: var(--shop);
+      box-shadow: 0 0 0 6px rgba(238, 77, 45, .1);
+      flex: 0 0 auto;
+    }
+
+    .route-line {
+      height: 2px;
+      flex: 1;
+      background: linear-gradient(90deg, var(--shop), #ffd1c8, var(--green));
+      position: relative;
+      overflow: hidden;
+    }
+
+    .route-line::after {
+      content: "";
+      position: absolute;
+      inset: -4px auto -4px 0;
+      width: 80px;
+      background: linear-gradient(90deg, transparent, #fff, transparent);
+      animation: routeMove 1.1s ease-in-out infinite;
+    }
+
+    @keyframes routeMove {
+      to { transform: translateX(540px); }
+    }
+
+    .screen {
+      display: none;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      animation: screenIn .34s cubic-bezier(.2, .72, .2, 1) both;
+    }
+
+    .screen.active { display: block; }
+
+    .screen.leaving {
+      display: block;
+      animation: screenOut .26s ease both;
+      pointer-events: none;
+    }
+
+    @keyframes screenIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes screenOut {
+      to { opacity: 0; transform: translateY(-12px) scale(.985); }
+    }
+
+    .screen-head {
+      padding: 22px 24px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: flex-start;
+    }
+
+    .screen-head h2 {
+      margin-bottom: 6px;
+      font-size: clamp(22px, 3vw, 30px);
+      letter-spacing: 0;
+    }
+
+    .screen-head p {
+      color: var(--muted);
+      margin-bottom: 0;
+      line-height: 1.45;
+    }
+
+    .screen-body {
+      padding: 24px;
+    }
+
+    .country-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .country {
+      min-height: 92px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      text-align: center;
+      padding: 14px;
+      transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+    }
+
+    .country:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 24px rgba(0,0,0,.08);
+    }
+
+    .country.active {
+      border-color: var(--shop);
+      box-shadow: 0 0 0 3px rgba(238, 77, 45, .11);
+    }
+
+    .flag {
+      display: block;
+      width: 48px;
+      height: 32px;
+      margin: 0 auto 10px;
+      border-radius: 5px;
+      border: 1px solid rgba(0,0,0,.12);
+      box-shadow: 0 5px 12px rgba(0,0,0,.08);
+      overflow: hidden;
+      position: relative;
+      background: #eee;
+    }
+
+    .flag.sg { background: linear-gradient(#ef3340 0 50%, #fff 50%); }
+    .flag.sg::before {
+      content: "â˜¾";
+      position: absolute;
+      left: 6px;
+      top: 1px;
+      color: #fff;
+      font-size: 18px;
+      line-height: 1;
+    }
+    .flag.sg::after {
+      content: "âœ¦";
+      position: absolute;
+      left: 22px;
+      top: 5px;
+      color: #fff;
+      font-size: 10px;
+      line-height: 1;
+    }
+
+    .flag.my {
+      background:
+        linear-gradient(90deg, #012169 0 44%, transparent 44%),
+        repeating-linear-gradient(#cc0001 0 3px, #fff 3px 6px);
+    }
+    .flag.my::after {
+      content: "â˜¾";
+      position: absolute;
+      left: 6px;
+      top: 6px;
+      color: #ffd100;
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .flag.id { background: linear-gradient(#ce1126 0 50%, #fff 50%); }
+    .flag.th {
+      background: linear-gradient(#a51931 0 16%, #fff 16% 31%, #2d2a4a 31% 69%, #fff 69% 84%, #a51931 84%);
+    }
+    .flag.vn { background: #da251d; }
+    .flag.vn::after {
+      content: "â˜…";
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      color: #ffdd00;
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .country b { display: block; font-size: 17px; margin-bottom: 0; }
+    .country span { display: none; color: var(--muted); font-size: 12px; line-height: 1.35; }
+    .country strong {
+      display: none;
+      margin-top: 12px;
+      color: var(--shop);
+      font-size: 18px;
+    }
+
+    .country em {
+      display: none;
+      margin-top: 8px;
+      color: #444;
+      font-style: normal;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .country-detail {
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .country-detail.hidden {
+      display: none;
+    }
+
+    .country-detail.collapsed .market-card,
+    .country-detail.collapsed .attribute-grid {
+      display: none;
+    }
+
+    .detail-toggle {
+      grid-column: 1 / -1;
+      justify-self: end;
+      min-height: 34px;
+      border-radius: 999px;
+      padding: 0 12px;
+      color: var(--shop);
+      background: #fff7f4;
+      border: 1px solid #ffd8cf;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .country-detail.collapsed {
+      display: grid;
+      grid-template-columns: 1fr;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .collapsed-summary {
+      display: none;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .country-detail.collapsed .collapsed-summary {
+      display: block;
+    }
+
+    .market-card {
+      border: 1px solid #ffd8cf;
+      border-radius: 12px;
+      background: #fff7f4;
+      padding: 18px;
+      animation: detailPop .28s ease both;
+    }
+
+    @keyframes detailPop {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .market-card span {
+      display: inline-flex;
+      color: var(--shop);
+      background: #fff;
+      border: 1px solid #ffd8cf;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 900;
+      margin-bottom: 12px;
+    }
+
+    .market-card h3 {
+      margin-bottom: 8px;
+      font-size: 26px;
+    }
+
+    .market-card p {
+      color: var(--muted);
+      margin-bottom: 0;
+      line-height: 1.5;
+    }
+
+    .attribute-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      animation: detailPop .34s ease both;
+    }
+
+    .mini-card {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--soft);
+      padding: 14px;
+    }
+
+    .mini-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 7px;
+    }
+
+    .mini-card b {
+      display: block;
+      font-size: 24px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .transition-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: none;
+      place-items: center;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.84), rgba(255,247,244,.92)),
+        repeating-linear-gradient(0deg, rgba(72,200,216,.08) 0 2px, transparent 2px 22px);
+      backdrop-filter: blur(6px);
+      overflow: hidden;
+    }
+
+    .transition-layer.active { display: grid; }
+
+    .transition-card {
+      width: min(520px, calc(100vw - 36px));
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: 0 24px 80px rgba(0,0,0,.18);
+      border: 1px solid var(--line);
+      padding: 24px;
+      text-align: center;
+      overflow: hidden;
+      position: relative;
+      z-index: 2;
+    }
+
+    .transition-sea {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .transition-sea::before,
+    .transition-sea::after {
+      content: "";
+      position: absolute;
+      left: -10%;
+      right: -10%;
+      height: 100px;
+      border-radius: 50%;
+      border-top: 2px solid rgba(72,200,216,.16);
+      animation: waveDrift 2.4s ease-in-out infinite;
+    }
+
+    .transition-sea::before { top: 26%; }
+    .transition-sea::after { top: 58%; animation-delay: .45s; }
+
+    @keyframes waveDrift {
+      0%, 100% { transform: translateX(-20px); }
+      50% { transform: translateX(24px); }
+    }
+
+    .swim-fish {
+      position: absolute;
+      top: 47%;
+      left: -110px;
+      width: 122px;
+      height: 96px;
+      z-index: 3;
+      --swim-distance: calc(100vw - 210px);
+      animation: fishSwimAcross 2.4s cubic-bezier(.18,.84,.2,1) forwards;
+    }
+
+    .swim-fish .dolphin3d {
+      transform: scale(.92);
+      transform-origin: center;
+    }
+
+    .wave-trail {
+      position: absolute;
+      left: 12%;
+      right: 24%;
+      top: calc(47% + 16px);
+      height: 28px;
+      z-index: 2;
+      opacity: .9;
+      overflow: hidden;
+    }
+
+    .wave-trail::before {
+      content: "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+      position: absolute;
+      left: 0;
+      top: -8px;
+      color: #48c8d8;
+      font-size: 30px;
+      letter-spacing: 6px;
+      font-weight: 900;
+      white-space: nowrap;
+      animation: waveFlow 1.1s linear infinite;
+    }
+
+    @keyframes waveFlow {
+      to { transform: translateX(-52px); }
+    }
+
+    .destination-bubble {
+      position: absolute;
+      right: clamp(24px, 8vw, 112px);
+      top: 45%;
+      transform: translateY(-50%);
+      min-width: 96px;
+      min-height: 92px;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      justify-content: center;
+      align-items: center;
+      place-items: center;
+      background: #fff7f4;
+      border: 1px solid #ffd8cf;
+      color: var(--shop);
+      font-weight: 900;
+      font-size: 18px;
+      box-shadow: 0 18px 42px rgba(238,77,45,.16);
+      z-index: 2;
+      animation: destinationPulse 1.25s ease-in-out infinite;
+    }
+
+    .destination-bubble .flag {
+      margin: 0;
+      width: 52px;
+      height: 34px;
+    }
+
+    .destination-bubble span {
+      line-height: 1;
+    }
+
+    @keyframes destinationPulse {
+      0%, 100% { transform: translateY(-50%) scale(1); }
+      50% { transform: translateY(-50%) scale(1.04); }
+    }
+
+    .swim-fish::before {
+      content: "";
+      position: absolute;
+      right: -15px;
+      top: 40px;
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #b8f3ff;
+      opacity: .9;
+      box-shadow: -13px 8px 0 -2px #b8f3ff, -27px 2px 0 -3px #b8f3ff;
+    }
+
+    @keyframes fishSwimAcross {
+      0% { transform: translate(0, 18px) rotate(-4deg); }
+      35% { transform: translate(calc(var(--swim-distance) * .36), -20px) rotate(7deg); }
+      70% { transform: translate(calc(var(--swim-distance) * .72), 12px) rotate(-3deg); }
+      100% { transform: translate(var(--swim-distance), -4px) rotate(3deg); }
+    }
+
+    .transition-card b { display: block; font-size: 20px; margin-bottom: 6px; }
+    .transition-card span { color: var(--muted); font-size: 13px; }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .field { margin-bottom: 14px; }
+
+    label {
+      display: block;
+      color: #444;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 7px;
+    }
+
+    .ai-filled {
+      color: var(--green);
+      font-size: 12px;
+      font-weight: 700;
+      margin-left: 6px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid #dcdcdc;
+      border-radius: 8px;
+      background: #fff;
+      padding: 10px 12px;
+      outline: none;
+      transition: border-color .18s ease, box-shadow .18s ease;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 96px;
+      line-height: 1.45;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--shop);
+      box-shadow: 0 0 0 3px rgba(238, 77, 45, .1);
+    }
+
+    .requirement-box {
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 16px;
+    }
+
+    .certificate-card {
+      border: 1px solid #ffd8cf;
+      border-radius: 12px;
+      background: #fff7f4;
+      padding: 18px;
+    }
+
+    .certificate-card .tag {
+      display: inline-flex;
+      border-radius: 999px;
+      background: var(--shop);
+      color: #fff;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 800;
+      margin-bottom: 14px;
+    }
+
+    .certificate-card h3 { font-size: 24px; margin-bottom: 8px; }
+    .certificate-card p { color: var(--muted); line-height: 1.5; margin-bottom: 0; }
+
+    .checklist {
+      display: grid;
+      gap: 10px;
+    }
+
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
+      background: #fff;
+    }
+
+    .tick {
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: #e9f8f1;
+      color: var(--green);
+      font-weight: 900;
+      flex: 0 0 auto;
+    }
+
+    .doc-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .doc {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 14px;
+      background: #fff;
+    }
+
+    .doc b { display: block; margin-bottom: 4px; }
+    .doc span { color: var(--muted); font-size: 13px; }
+
+    .doc-state {
+      color: var(--green);
+      background: #e9f8f1;
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .api-strip {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      border: 1px solid #d7e9ff;
+      border-radius: 10px;
+      background: #f4f9ff;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      color: #1f4d7a;
+      font-size: 13px;
+    }
+
+    .api-strip b { display: block; color: #12375d; margin-bottom: 3px; }
+
+    .api-chip {
+      border-radius: 999px;
+      padding: 7px 10px;
+      background: #fff;
+      border: 1px solid #cfe2ff;
+      color: #1f4d7a;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .preview-frame {
+      min-height: 172px;
+      border: 1px dashed #d5d5d5;
+      border-radius: 10px;
+      background: #fafafa;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      padding: 12px;
+    }
+
+    .preview-frame img {
+      width: 100%;
+      height: 100%;
+      max-height: 260px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .full-row { grid-column: 1 / -1; }
+
+    .backend-panel {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      padding: 14px;
+      margin-top: 14px;
+    }
+
+    .backend-panel h4 {
+      margin: 0 0 8px;
+      font-size: 15px;
+    }
+
+    .backend-panel pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 0;
+      color: #374151;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .issue-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .issue-list div {
+      border: 1px solid #ffe0b2;
+      background: #fff8e8;
+      color: #7c4a03;
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 13px;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 18px 24px;
+      border-top: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .actions.hidden {
+      display: none;
+    }
+
+    .btn {
+      min-height: 44px;
+      border-radius: 8px;
+      padding: 0 18px;
+      font-weight: 800;
+    }
+
+    .btn-primary {
+      color: #fff;
+      background: var(--shop);
+    }
+
+    .btn-primary:hover { background: var(--shop-dark); }
+
+    .btn-secondary {
+      color: #333;
+      background: #fff;
+      border: 1px solid #d8d8d8;
+    }
+
+    .bot-launcher {
+      position: fixed;
+      left: var(--bot-x, calc(100vw - 142px));
+      top: var(--bot-y, calc(100vh - 124px));
+      z-index: 30;
+      width: 124px;
+      height: 104px;
+      border-radius: 28px;
+      background: transparent;
+      box-shadow: none;
+      display: grid;
+      place-items: center;
+      border: 0;
+      overflow: visible;
+      transition: left .18s ease, top .18s ease;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .bot-launcher:hover {
+      filter: brightness(1.04);
+    }
+
+    .bot-launcher.dragging {
+      transition: none;
+      cursor: grabbing;
+    }
+
+    .bot-launcher.paused::after {
+      content: "Paused";
+      position: absolute;
+      left: 50%;
+      bottom: -18px;
+      transform: translateX(-50%);
+      border-radius: 999px;
+      background: rgba(34,34,34,.82);
+      color: #fff;
+      padding: 4px 8px;
+      font-size: 11px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .mascot-control {
+      position: fixed;
+      left: calc(var(--bot-x, calc(100vw - 142px)) + 18px);
+      top: calc(var(--bot-y, calc(100vh - 124px)) + 96px);
+      z-index: 31;
+      min-height: 30px;
+      border-radius: 999px;
+      padding: 0 11px;
+      background: #fff;
+      color: #1f5d72;
+      border: 1px solid rgba(72,200,216,.24);
+      box-shadow: 0 8px 22px rgba(31,93,114,.12);
+      font-size: 12px;
+      font-weight: 900;
+      transition: left 3.8s cubic-bezier(.2,.7,.22,1), top 3.8s cubic-bezier(.2,.7,.22,1), background .18s ease, color .18s ease;
+    }
+
+    .mascot-control.paused {
+      background: #1f5d72;
+      color: #fff;
+    }
+
+    .bot-launcher.dragging + .mascot-control {
+      transition: none;
+    }
+
+    .bot-launcher::before {
+      content: "AI";
+      position: absolute;
+      right: 92px;
+      top: -4px;
+      color: #1f5d72;
+      background: rgba(255,255,255,.94);
+      border: 1px solid rgba(72,200,216,.24);
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 12px;
+      font-weight: 800;
+      animation: greet 2.4s ease-in-out infinite;
+    }
+
+    @keyframes greet {
+      0%, 100% { transform: translateY(0); opacity: .78; }
+      50% { transform: translateY(-5px); opacity: 1; }
+    }
+
+    .dolphin3d {
+      width: 122px;
+      height: 96px;
+      position: relative;
+      display: block;
+      transform-style: preserve-3d;
+      animation: mascotFloat 3.2s ease-in-out infinite;
+      filter: drop-shadow(0 18px 18px rgba(18, 72, 98, .22));
+      will-change: transform;
+    }
+
+    .dolphin3d svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    @keyframes mascotFloat {
+      0%, 100% { transform: translateY(0) rotateY(-12deg) rotateZ(-3deg); }
+      35% { transform: translateY(-7px) rotateY(16deg) rotateZ(3deg); }
+      70% { transform: translateY(-2px) rotateY(-6deg) rotateZ(-1deg); }
+    }
+
+    .dolphin3d .tail,
+    .dolphin3d .fin {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: finPulse 1.35s ease-in-out infinite;
+    }
+
+    .dolphin3d .tail {
+      animation-name: tailPulse;
+    }
+
+    @keyframes finPulse {
+      0%, 100% { transform: rotate(0deg); }
+      50% { transform: rotate(8deg); }
+    }
+
+    @keyframes tailPulse {
+      0%, 100% { transform: rotate(-3deg); }
+      50% { transform: rotate(9deg); }
+    }
+
+    .dolphin3d .eye-shine {
+      animation: blink 4.2s infinite;
+      transform-box: fill-box;
+      transform-origin: center;
+    }
+
+    @keyframes blink {
+      0%, 92%, 100% { transform: scaleY(1); }
+      95% { transform: scaleY(.1); }
+    }
+
+    .chat-panel {
+      position: fixed;
+      right: 24px;
+      bottom: 120px;
+      z-index: 31;
+      width: min(380px, calc(100vw - 32px));
+      max-height: min(620px, calc(100vh - 150px));
+      display: none;
+      flex-direction: column;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: 0 22px 70px rgba(0,0,0,.18);
+      overflow: hidden;
+    }
+
+    .chat-panel.open { display: flex; animation: slideIn .2s ease both; }
+
+    .chat-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      border-bottom: 1px solid var(--line);
+      background: #fff7f4;
+    }
+
+    .chat-head b { display: block; }
+    .chat-head span { color: var(--muted); font-size: 12px; }
+
+    .chat-close {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: #fff;
+      color: #555;
+      border: 1px solid #ffd8cf;
+      font-weight: 900;
+    }
+
+    .chat-log {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow: auto;
+      min-height: 280px;
+    }
+
+    .bubble {
+      width: fit-content;
+      max-width: 92%;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 14px;
+      line-height: 1.42;
+      animation: slideIn .18s ease both;
+    }
+
+    .bubble.agent { background: #fff7f4; color: #333; border: 1px solid #ffd8cf; }
+    .bubble.user { align-self: flex-end; color: #fff; background: var(--shop); }
+
+    .quick {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 0 14px 12px;
+    }
+
+    .quick button {
+      min-height: 36px;
+      border-radius: 8px;
+      color: #444;
+      background: #fff;
+      border: 1px solid var(--line);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .chat-form {
+      display: grid;
+      grid-template-columns: 1fr 58px;
+      gap: 8px;
+      padding: 12px 14px 14px;
+      border-top: 1px solid var(--line);
+    }
+
+    .chat-form textarea {
+      min-height: 48px;
+      max-height: 110px;
+    }
+
+    .send {
+      border-radius: 8px;
+      color: #fff;
+      background: var(--shop);
+      font-weight: 800;
+    }
+
+    @media (max-width: 820px) {
+      .topbar { align-items: flex-start; height: auto; padding-top: 14px; padding-bottom: 14px; flex-direction: column; }
+      .status-pill { white-space: normal; }
+      .country-grid, .form-grid, .requirement-box, .country-detail, .attribute-grid { grid-template-columns: 1fr; }
+      .screen-head { flex-direction: column; }
+      .actions { flex-direction: column-reverse; align-items: stretch; }
+      .btn { width: 100%; }
+      .bot-launcher { right: 16px; bottom: 16px; }
+      .chat-panel { right: 16px; bottom: 108px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="bag">TR</div>
+      <div>
+        <h1>TradeReady</h1>
+        <small>Shopee seller compliance assistant</small>
+      </div>
+    </div>
+    <div class="status-pill"><i class="dot"></i><span id="statusText">Choose a destination market</span></div>
+  </header>
+
+  <main>
+    <section class="route-banner" id="routeBanner">
+      <i class="route-dot"></i>
+      <span id="routeText">Malaysia selected</span>
+      <div class="route-line"></div>
+      <span id="routeStage">AI checking requirements</span>
+    </section>
+
+    <section class="screen active" data-screen="0">
+      <div class="screen-head">
+        <div>
+          <h2>Choose your destination country</h2>
+          <p>Select one destination country. TradeReady will show the key market and tax attributes before moving forward.</p>
+        </div>
+      </div>
+      <div class="screen-body">
+        <div class="country-grid" id="countryGrid"></div>
+        <div class="country-detail hidden" id="countryDetail">
+          <div class="collapsed-summary" id="collapsedSummary">Malaysia selected</div>
+          <article class="market-card">
+            <span id="marketTag">Selected market</span>
+            <h3 id="marketTitle">Malaysia</h3>
+            <p id="marketCopy">A strong SEA cross-border destination with SIRIM requirements for wireless electronics.</p>
+          </article>
+          <div class="attribute-grid" id="attributeGrid"></div>
+          <button class="detail-toggle" id="detailToggle" type="button">Collapse details</button>
+        </div>
+      </div>
+      <div class="actions hidden" id="countryActions">
+        <span class="status-pill"><i class="dot"></i><span id="countryLabel">Malaysia selected</span></span>
+        <button class="btn btn-primary" data-next>Next</button>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="1">
+      <div class="screen-head">
+        <div>
+          <h2>Describe and photograph your product</h2>
+          <p>The dolphin assistant asks for a product description and photo, then uses AI vision to fill customs-clearance fields.</p>
+        </div>
+      </div>
+      <div class="screen-body">
+        <div class="api-strip">
+          <div>
+            <b>Connected backend</b>
+            Product confirmation, landed cost, required documents, evidence, and critic status come from Jason's FastAPI workflow.
+          </div>
+          <span class="api-chip" id="backendStatus">Checking API</span>
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label for="productType">Detected product <span class="ai-filled">AI filled after photo</span></label>
+            <select id="productType">
+              <option value="wireless_earbuds">Wireless earbuds</option>
+              <option value="bluetooth_speaker">Bluetooth speaker</option>
+              <option value="smartwatch">Smartwatch</option>
+              <option value="phone_charger">Phone charger</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="productDescriptionInput">Product description</label>
+            <textarea id="productDescriptionInput" placeholder="Example: wireless Bluetooth earbuds with charging case and rechargeable battery">wireless Bluetooth earbuds with charging case and rechargeable battery</textarea>
+          </div>
+          <div class="field">
+            <label for="productPhoto">Take or upload product photo</label>
+            <input id="productPhoto" type="file" accept="image/*">
+          </div>
+          <div class="field">
+            <label for="quantity">Quantity</label>
+            <input id="quantity" type="number" min="1" value="200">
+          </div>
+          <div class="field">
+            <label for="unitValue">Unit value</label>
+            <input id="unitValue" type="number" min="1" value="45">
+          </div>
+          <div class="field">
+            <label for="currency">Currency</label>
+            <select id="currency">
+              <option value="SGD">SGD</option>
+              <option value="MYR">MYR</option>
+              <option value="USD">USD</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="originCountry">Origin country</label>
+            <select id="originCountry">
+              <option value="Singapore">Singapore</option>
+              <option value="Malaysia">Malaysia</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="invoiceNumber">Invoice number</label>
+            <input id="invoiceNumber" value="TR-001">
+          </div>
+          <div class="field">
+            <label for="sellerName">Seller</label>
+            <input id="sellerName" value="Jason Store">
+          </div>
+          <div class="field">
+            <label for="consigneeName">Consignee</label>
+            <input id="consigneeName" value="Malaysia Buyer">
+          </div>
+          <div class="field">
+            <label>Photo preview</label>
+            <div class="preview-frame" id="photoPreview">Take or upload a product photo. The backend will call OpenAI vision when a photo is provided.</div>
+          </div>
+          <div class="field full-row">
+            <label for="shipmentText">Shipment text sent to backend</label>
+            <textarea id="shipmentText"></textarea>
+          </div>
+          <div class="field full-row">
+            <button class="btn btn-primary" id="runBackendCheck" type="button">Process photo and fill customs fields</button>
+          </div>
+        </div>
+
+        <div class="requirement-box">
+          <article class="certificate-card">
+            <span class="tag">Requirement found</span>
+            <h3 id="certificateTitle">SIRIM Certificate of Approval</h3>
+            <p id="certificateCopy">Wireless electronics entering Malaysia commonly require SIRIM approval before import or sale.</p>
+          </article>
+          <div class="checklist" id="checklist"></div>
+        </div>
+        <div class="backend-panel">
+          <h4>Critic validation</h4>
+          <pre id="criticSummary">Run the AI compliance check to validate evidence and calculations.</pre>
+          <div class="issue-list" id="criticIssues"></div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-secondary" data-back>Back</button>
+        <button class="btn btn-primary" data-next>Next</button>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="2">
+      <div class="screen-head">
+        <div>
+          <h2>Registration form</h2>
+          <p>The agent pre-fills the certificate registration form. Seller can edit anything before export.</p>
+        </div>
+      </div>
+      <div class="screen-body">
+        <div class="form-grid">
+          <div>
+            <div class="field">
+              <label for="companyName">Company name <span class="ai-filled">AI filled</span></label>
+              <input id="companyName" value="BrightCart Trading Pte Ltd">
+            </div>
+            <div class="field">
+              <label for="registrationNo">Business registration no. <span class="ai-filled">AI filled</span></label>
+              <input id="registrationNo" value="202612345M">
+            </div>
+            <div class="field">
+              <label for="contactEmail">Contact email <span class="ai-filled">AI filled</span></label>
+              <input id="contactEmail" value="trade@brightcart.sg">
+            </div>
+          </div>
+          <div>
+            <div class="field">
+              <label for="certificateType">Certificate type <span class="ai-filled">AI filled</span></label>
+              <input id="certificateType">
+            </div>
+            <div class="field">
+              <label for="productName">Product name <span class="ai-filled">AI filled</span></label>
+              <input id="productName">
+            </div>
+            <div class="field">
+              <label for="hsCode">HS code <span class="ai-filled">AI filled</span></label>
+              <input id="hsCode">
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label for="productDescription">Product description <span class="ai-filled">AI filled</span></label>
+          <textarea id="productDescription"></textarea>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-secondary" data-back>Back</button>
+        <button class="btn btn-primary" data-next>Next</button>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="3">
+      <div class="screen-head">
+        <div>
+          <h2>Submission documents</h2>
+          <p>The agent brings the required documents into your program. Review, then download the PDF pack.</p>
+        </div>
+      </div>
+      <div class="screen-body">
+        <div class="doc-list" id="docList"></div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-secondary" data-back>Back</button>
+        <button class="btn btn-primary" id="downloadPdf">Download PDF</button>
+      </div>
+    </section>
+  </main>
+
+  <section class="chat-panel" id="chatPanel" aria-label="AI chatbot">
+    <div class="chat-head">
+      <div>
+        <b>TradeReady AI Agent</b>
+        <span>Ask about tax, certificates, forms, or documents</span>
+      </div>
+      <button class="chat-close" id="closeChat" type="button">Ã—</button>
+    </div>
+    <div class="chat-log" id="chatLog">
+      <div class="bubble agent">Hi, I am your TradeReady dolphin assistant. Choose a destination country first, then I will ask for a product description and photo.</div>
+    </div>
+    <div class="quick">
+      <button type="button" data-quick="tax">Explain tax</button>
+      <button type="button" data-quick="cert">Check certificate</button>
+      <button type="button" data-quick="fill">Fill form</button>
+      <button type="button" data-quick="docs">Prepare docs</button>
+      <button type="button" id="pauseMascot">Pause movement</button>
+    </div>
+    <form class="chat-form" id="chatForm">
+      <textarea id="chatInput" placeholder="Ask: what certificate do I need for Malaysia?"></textarea>
+      <button class="send" type="submit">Send</button>
+    </form>
+  </section>
+
+  <button class="bot-launcher" id="botLauncher" type="button" aria-label="Open AI chatbot">
+    <span class="dolphin3d" data-dolphin aria-hidden="true"></span>
+  </button>
+  <button class="mascot-control" id="pauseMascotFloating" type="button">Pause</button>
+
+  <div class="transition-layer" id="transitionLayer">
+    <div class="transition-sea"></div>
+    <div class="wave-trail" aria-hidden="true"></div>
+    <div class="swim-fish">
+      <span class="dolphin3d" data-dolphin aria-hidden="true"></span>
+    </div>
+    <span class="destination-bubble">
+      <i class="flag my" id="destinationFlag" aria-hidden="true"></i>
+      <span id="destinationBubble">MY</span>
+    </span>
+    <div class="transition-card">
+      <b id="transitionTitle">Opening next step</b>
+      <span id="transitionCopy">TradeReady is preparing the next compliance screen.</span>
+    </div>
+  </div>
+
+  <template id="dolphinTemplate">
+    <svg viewBox="0 0 240 180" role="img" aria-label="TradeReady dolphin assistant">
+      <defs>
+        <filter id="soft3dShadow" x="-20%" y="-20%" width="150%" height="150%">
+          <feDropShadow dx="0" dy="14" stdDeviation="10" flood-color="#1f5d72" flood-opacity=".18"/>
+        </filter>
+        <linearGradient id="redBand" x1="44" y1="58" x2="172" y2="18" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#ff1f2d"/>
+          <stop offset=".55" stop-color="#ff3b1f"/>
+          <stop offset="1" stop-color="#ff8b1a"/>
+        </linearGradient>
+        <linearGradient id="orangeBand" x1="55" y1="86" x2="190" y2="42" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#ff6a1c"/>
+          <stop offset="1" stop-color="#ffb028"/>
+        </linearGradient>
+        <linearGradient id="greenBand" x1="88" y1="100" x2="214" y2="60" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#00ad72"/>
+          <stop offset="1" stop-color="#00c986"/>
+        </linearGradient>
+        <linearGradient id="cyanBand" x1="38" y1="132" x2="148" y2="84" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#08d4e8"/>
+          <stop offset="1" stop-color="#1f8dff"/>
+        </linearGradient>
+        <linearGradient id="blueBand" x1="44" y1="160" x2="142" y2="104" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#123bd9"/>
+          <stop offset=".55" stop-color="#1f87ff"/>
+          <stop offset="1" stop-color="#55cfff"/>
+        </linearGradient>
+        <linearGradient id="belly" x1="128" y1="72" x2="222" y2="106" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#d8f6ff"/>
+          <stop offset="1" stop-color="#bfe9ff"/>
+        </linearGradient>
+        <radialGradient id="bodyHighlight" cx="42%" cy="30%" r="70%">
+          <stop stop-color="rgba(255,255,255,.72)"/>
+          <stop offset=".45" stop-color="rgba(255,255,255,.12)"/>
+          <stop offset="1" stop-color="rgba(255,255,255,0)"/>
+        </radialGradient>
+      </defs>
+
+      <g filter="url(#soft3dShadow)">
+        <path class="tail" d="M48 136 C28 137 16 151 9 166 C27 165 40 160 50 149 C55 162 65 170 80 174 C80 156 73 143 61 136 C71 103 88 78 112 60 C84 57 61 80 48 136Z" fill="url(#blueBand)"/>
+        <path d="M55 126 C76 78 112 42 158 32 C191 24 215 32 229 55 C219 63 199 61 179 69 C147 82 116 108 69 145 C62 142 58 136 55 126Z" fill="url(#cyanBand)"/>
+        <path d="M82 87 C111 54 151 25 190 26 C211 27 224 38 232 56 C202 55 178 65 154 80 C126 96 101 99 72 101 C72 97 76 92 82 87Z" fill="url(#orangeBand)"/>
+        <path d="M92 58 C121 34 158 16 194 24 C211 28 224 38 232 56 C191 50 160 58 132 75 C108 89 88 95 62 99 C67 82 76 68 92 58Z" fill="url(#redBand)"/>
+        <path d="M132 78 C159 68 185 58 216 58 C223 59 229 62 233 68 C226 78 203 80 183 83 C160 86 145 95 127 108 C111 108 97 105 84 100 C100 94 114 86 132 78Z" fill="url(#greenBand)"/>
+        <path d="M136 82 C158 78 181 76 207 78 C225 80 235 86 236 94 C230 105 209 111 183 111 C157 111 137 103 123 94 C126 89 131 85 136 82Z" fill="url(#belly)"/>
+        <path class="fin" d="M137 105 C138 130 128 148 110 153 C104 139 109 118 124 98 C129 100 133 102 137 105Z" fill="#0c7df0" opacity=".95"/>
+        <path class="fin" d="M169 108 C173 129 168 145 155 150 C151 136 155 118 165 105 C166 106 168 107 169 108Z" fill="#006ee8" opacity=".95"/>
+        <path d="M66 100 C96 91 121 82 146 65 C128 80 109 103 73 132 C64 128 60 117 66 100Z" fill="url(#bodyHighlight)" opacity=".5"/>
+        <circle cx="196" cy="63" r="9" fill="#063ea8"/>
+        <circle class="eye-shine" cx="198" cy="60" r="3.1" fill="#fff"/>
+      </g>
+    </svg>
+  </template>
+
+  <script>
+    const API_BASE = "http://127.0.0.1:8000";
+
+    const countries = {
+      Singapore: { flag: "sg", code: "SG", duty: 0, taxName: "GST", tax: 9, cert: "No certificate flagged", authority: "Singapore Customs", time: "Same day to 2 days", population: "5.9M", ecommerce: "High-value hub", language: "English", risk: "Low" },
+      Malaysia: { flag: "my", code: "MY", duty: 0, taxName: "Sales Tax", tax: 10, cert: "SIRIM / MCMC review", authority: "SIRIM QAS / MCMC", time: "5 to 10 business days", population: "34M", ecommerce: "Shopee-heavy market", language: "Malay / English", risk: "Medium" }
+    };
+
+    const products = {
+      wireless_earbuds: {
+        name: "Wireless earbuds",
+        hs: "8518.30",
+        description: "Wireless Bluetooth earbuds with rechargeable battery and audio receiver function.",
+        signal: "Wireless electronics"
+      },
+      bluetooth_speaker: {
+        name: "Bluetooth speaker",
+        hs: "8518.21",
+        description: "Portable Bluetooth speaker with rechargeable battery and wireless audio function.",
+        signal: "Wireless electronics"
+      },
+      smartwatch: {
+        name: "Smartwatch",
+        hs: "8517.62",
+        description: "Connected smartwatch with wireless data transmission and rechargeable battery.",
+        signal: "Wireless electronics"
+      },
+      phone_charger: {
+        name: "Phone charger",
+        hs: "8504.40",
+        description: "USB phone charger and static converter for consumer electronics.",
+        signal: "Electrical electronics"
+      }
+    };
+
+    let step = 0;
+    let selectedCountry = "";
+    let countryDetailsCollapsed = false;
+    let compliancePackage = null;
+    let detectedProductFacts = null;
+    let mascotTimer;
+    let mascotPaused = false;
+    let draggingMascot = false;
+    let mascotWasDragged = false;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+    let dragStartX = 0;
+    let dragStartY = 0;
+
+    const countryGrid = document.getElementById("countryGrid");
+    const taxSummary = document.getElementById("taxSummary");
+    const screens = [...document.querySelectorAll(".screen")];
+    const statusText = document.getElementById("statusText");
+    const chatPanel = document.getElementById("chatPanel");
+    const chatLog = document.getElementById("chatLog");
+    const routeBanner = document.getElementById("routeBanner");
+    const transitionLayer = document.getElementById("transitionLayer");
+    const botLauncher = document.getElementById("botLauncher");
+
+    function product() {
+      return products[document.getElementById("productType").value];
+    }
+
+    function money(value) {
+      return "$" + Number(value || 0).toFixed(2);
+    }
+
+    function backendMoney(value, currency = "SGD") {
+      return `${currency} ${Number(value || 0).toFixed(2)}`;
+    }
+
+    function categoryFromDescription(text) {
+      const lower = String(text || "").toLowerCase();
+      if (lower.includes("earbud") || lower.includes("earphone") || lower.includes("headphone")) return "wireless_earbuds";
+      if (lower.includes("speaker")) return "bluetooth_speaker";
+      if (lower.includes("watch")) return "smartwatch";
+      if (lower.includes("charger") || lower.includes("adapter")) return "phone_charger";
+      return document.getElementById("productType").value;
+    }
+
+    function localProductFacts() {
+      const description = document.getElementById("productDescriptionInput")?.value || "";
+      const category = categoryFromDescription(description);
+      document.getElementById("productType").value = category;
+      const p = product();
+      return {
+        category,
+        label: p.name,
+        wireless: category !== "phone_charger",
+        battery: category !== "phone_charger",
+        mains_powered: category === "phone_charger",
+        confidence: 0.88,
+        confirmed: true
+      };
+    }
+
+    function buildShipmentText() {
+      const p = product();
+      const productDescription = document.getElementById("productDescriptionInput")?.value || p.name;
+      const quantity = document.getElementById("quantity").value || 1;
+      const unitValue = document.getElementById("unitValue").value || 1;
+      const currency = document.getElementById("currency").value || "SGD";
+      const origin = document.getElementById("originCountry").value || "Singapore";
+      const destination = selectedCountry || "Malaysia";
+      const invoice = document.getElementById("invoiceNumber").value || "TR-001";
+      const seller = document.getElementById("sellerName").value || "Jason Store";
+      const consignee = document.getElementById("consigneeName").value || `${destination} Buyer`;
+      return `${quantity} units ${productDescription}, ${currency} ${unitValue} each, shipping ${origin} to ${destination}, invoice ${invoice}, seller: ${seller}, consignee: ${consignee}`;
+    }
+
+    function syncShipmentText() {
+      const shipmentText = document.getElementById("shipmentText");
+      if (shipmentText) shipmentText.value = buildShipmentText();
+    }
+
+    async function checkBackendHealth() {
+      const status = document.getElementById("backendStatus");
+      try {
+        const response = await fetch(`${API_BASE}/health`);
+        if (!response.ok) throw new Error("not ready");
+        status.textContent = "API online";
+        status.style.color = "#146c43";
+      } catch (error) {
+        status.textContent = "API offline";
+        status.style.color = "#a33";
+      }
+    }
+
+    async function identifyProductFromPhoto() {
+      const input = document.getElementById("productPhoto");
+      const category = document.getElementById("productType").value;
+      const description = document.getElementById("productDescriptionInput")?.value || products[category].name;
+      if (!input.files || !input.files[0]) {
+        detectedProductFacts = localProductFacts();
+        addBubble("agent", `No photo uploaded. I used your product description to infer: ${detectedProductFacts.label}.`);
+        return detectedProductFacts;
+      }
+      const body = new FormData();
+      body.append("image", input.files[0]);
+      body.append("hint", description);
+      const response = await fetch(`${API_BASE}/api/product-identification`, {
+        method: "POST",
+        body
+      });
+      if (!response.ok) throw new Error("Product identification failed");
+      const data = await response.json();
+      detectedProductFacts = { ...data.product_facts, confirmed: true };
+      if (products[detectedProductFacts.category]) {
+        document.getElementById("productType").value = detectedProductFacts.category;
+      }
+      syncShipmentText();
+      addBubble("agent", `Photo check detected: ${detectedProductFacts.label || products[detectedProductFacts.category]?.name}. User confirmation captured.`);
+      return detectedProductFacts;
+    }
+
+    async function runComplianceCheck() {
+      if (!selectedCountry) {
+        addBubble("agent", "Please select Malaysia or Singapore before running the compliance check.");
+        chatPanel.classList.add("open");
+        return null;
+      }
+      syncShipmentText();
+      const button = document.getElementById("runBackendCheck");
+      button.disabled = true;
+      button.textContent = "Processing photo...";
+      try {
+        const facts = await identifyProductFromPhoto();
+        const payload = {
+          product_confirmed: true,
+          product_facts: facts,
+          destination_country: selectedCountry,
+          shipment_text: document.getElementById("shipmentText").value
+        };
+        const response = await fetch(`${API_BASE}/api/compliance-runs`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (!response.ok) throw new Error("Compliance run failed");
+        const data = await response.json();
+        if (data.workflow_status === "needs_user_input") {
+          compliancePackage = null;
+          document.getElementById("criticSummary").textContent = data.message || "More user input is required.";
+          document.getElementById("criticIssues").innerHTML = (data.missing_fields || []).map(field => `<div>Missing required field: ${field}</div>`).join("");
+          addBubble("agent", `Backend needs more input: ${(data.missing_fields || []).join(", ")}.`);
+          return data;
+        }
+        compliancePackage = data;
+        renderAll();
+        addBubble("agent", `Backend returned ${compliancePackage.workflow_status}. Critic status: ${compliancePackage.critic.status}.`);
+        return compliancePackage;
+      } catch (error) {
+        addBubble("agent", `Backend check failed: ${error.message}. Keep the backend running at ${API_BASE}.`);
+        document.getElementById("criticSummary").textContent = error.message;
+        return null;
+      } finally {
+        button.disabled = false;
+        button.textContent = "Process photo and fill customs fields";
+      }
+    }
+
+    function certificateName() {
+      if (!selectedCountry) return "Select a country first";
+      if (compliancePackage?.restricted_goods?.certification_bodies?.length) {
+        return compliancePackage.restricted_goods.certification_bodies.join(" / ");
+      }
+      return countries[selectedCountry].cert;
+    }
+
+    function addBubble(type, text) {
+      const bubble = document.createElement("div");
+      bubble.className = `bubble ${type}`;
+      bubble.textContent = text;
+      chatLog.appendChild(bubble);
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    function initDolphins() {
+      const template = document.getElementById("dolphinTemplate").innerHTML.trim();
+      document.querySelectorAll("[data-dolphin]").forEach(node => {
+        node.innerHTML = template;
+      });
+    }
+
+    function moveMascot(random = true) {
+      if (chatPanel.classList.contains("open") || mascotPaused || draggingMascot) return;
+      const maxX = Math.max(16, window.innerWidth - 150);
+      const maxY = Math.max(92, window.innerHeight - 132);
+      const minY = Math.max(280, Math.round(window.innerHeight * 0.62));
+      const x = maxX;
+      const y = maxY;
+      botLauncher.style.setProperty("--bot-x", `${x}px`);
+      botLauncher.style.setProperty("--bot-y", `${y}px`);
+    }
+
+    function startMascotWander() {
+      clearInterval(mascotTimer);
+      if (!mascotPaused) {
+        moveMascot(false);
+      }
+    }
+
+    function pauseMascot(paused) {
+      mascotPaused = paused;
+      botLauncher.classList.toggle("paused", paused);
+      document.getElementById("pauseMascotFloating").classList.toggle("paused", paused);
+      document.getElementById("pauseMascot").textContent = paused ? "Resume movement" : "Pause movement";
+      document.getElementById("pauseMascotFloating").textContent = paused ? "Resume" : "Pause";
+      if (paused) {
+        clearInterval(mascotTimer);
+        addBubble("agent", "Movement paused. You can drag me anywhere on the screen.");
+      } else {
+        addBubble("agent", "Movement resumed. I will stay here and rotate gently.");
+        startMascotWander();
+      }
+    }
+
+    function setMascotPosition(x, y) {
+      const maxX = Math.max(16, window.innerWidth - 128);
+      const maxY = Math.max(82, window.innerHeight - 104);
+      const minY = Math.max(260, Math.round(window.innerHeight * 0.58));
+      const nextX = Math.min(Math.max(16, x), maxX);
+      const nextY = Math.min(Math.max(minY, y), maxY);
+      botLauncher.style.setProperty("--bot-x", `${Math.round(nextX)}px`);
+      botLauncher.style.setProperty("--bot-y", `${Math.round(nextY)}px`);
+      document.getElementById("pauseMascotFloating").style.setProperty("--bot-x", `${Math.round(nextX)}px`);
+      document.getElementById("pauseMascotFloating").style.setProperty("--bot-y", `${Math.round(nextY)}px`);
+    }
+
+    function setStep(nextStep, animated = false) {
+      step = Math.max(0, Math.min(3, nextStep));
+      screens.forEach((screen, index) => screen.classList.toggle("active", index === step));
+      const labels = ["Choose a destination country", "Dolphin is collecting product description and photo", "Agent filled the customs form", "Documents are ready to download"];
+      statusText.textContent = labels[step];
+      routeBanner.classList.toggle("visible", step > 0);
+      document.getElementById("routeText").textContent = `${selectedCountry || "Market"} selected`;
+      document.getElementById("routeStage").textContent = labels[step];
+      renderAll();
+    }
+
+    async function goToStep(nextStep) {
+      if (!selectedCountry) {
+        addBubble("agent", "Please select a destination country first. I will show market information before moving to the next step.");
+        chatPanel.classList.add("open");
+        return;
+      }
+      const titles = ["", "Collecting product evidence", "Filling customs clearance form", "Preparing document pack"];
+      const copies = ["", `Please describe the product and upload a photo for ${selectedCountry}.`, `Using AI-detected product facts and ${certificateName()} fields.`, "Bringing all submission files into your program."];
+      document.getElementById("transitionTitle").textContent = titles[nextStep] || "Opening next step";
+      document.getElementById("transitionCopy").textContent = copies[nextStep] || "TradeReady is preparing the next screen.";
+      document.getElementById("destinationBubble").textContent = countries[selectedCountry]?.code || "GO";
+      document.getElementById("destinationFlag").className = `flag ${countries[selectedCountry]?.flag || "my"}`;
+      transitionLayer.classList.add("active");
+      const fish = document.querySelector(".transition-layer .swim-fish");
+      const destination = document.querySelector(".destination-bubble");
+      const destinationRect = destination.getBoundingClientRect();
+      const fishStartX = -110;
+      const fishStopX = destinationRect.left + destinationRect.width * 0.34;
+      fish.style.setProperty("--swim-distance", `${Math.max(220, fishStopX - fishStartX)}px`);
+      fish.style.animation = "none";
+      void fish.offsetWidth;
+      fish.style.animation = "";
+      await new Promise(resolve => setTimeout(resolve, 2450));
+      transitionLayer.classList.remove("active");
+      setStep(nextStep, true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function renderCountries() {
+      countryGrid.innerHTML = Object.entries(countries).map(([name, data]) => `
+        <button class="country ${name === selectedCountry ? "active" : ""}" type="button" data-country="${name}">
+          <i class="flag ${data.flag}" aria-hidden="true"></i>
+          <b>${name}</b>
+        </button>
+      `).join("");
+      document.getElementById("countryLabel").textContent = selectedCountry ? `${selectedCountry} selected` : "Choose a country";
+    }
+
+    function renderTax() {
+      const detail = document.getElementById("countryDetail");
+      const actions = document.getElementById("countryActions");
+      if (!selectedCountry) {
+        detail.classList.add("hidden");
+        actions.classList.add("hidden");
+        return;
+      }
+      detail.classList.remove("hidden");
+      detail.classList.toggle("collapsed", countryDetailsCollapsed);
+      actions.classList.remove("hidden");
+      const c = countries[selectedCountry];
+      const taxLine = compliancePackage?.duty_tax?.taxes?.[0];
+      const dutyRate = compliancePackage ? compliancePackage.duty_tax.import_duty.rate * 100 : c.duty;
+      const taxRate = taxLine ? taxLine.rate * 100 : c.tax;
+      const dutyAmount = compliancePackage ? compliancePackage.duty_tax.import_duty.amount : 0;
+      const taxAmount = taxLine ? taxLine.amount : 0;
+      const currency = compliancePackage?.duty_tax?.currency || document.getElementById("currency")?.value || "SGD";
+      const landed = compliancePackage ? compliancePackage.duty_tax.landed_cost_estimate : 0;
+      document.getElementById("marketTitle").textContent = selectedCountry;
+      document.getElementById("marketCopy").textContent = `${c.ecommerce}. Population ${c.population}. Primary language: ${c.language}. Compliance risk: ${c.risk}.`;
+      document.getElementById("marketTag").textContent = `${selectedCountry} market attributes`;
+      document.getElementById("collapsedSummary").textContent = `${selectedCountry} selected - ${c.population} people - ${dutyRate.toFixed(1)}% duty - ${(taxLine?.name || c.taxName)} ${taxRate.toFixed(1)}%`;
+      document.getElementById("detailToggle").textContent = countryDetailsCollapsed ? "Show details" : "Collapse details";
+      document.getElementById("attributeGrid").innerHTML = [
+        ["Population", c.population, c.ecommerce],
+        ["Import duty", `${dutyRate.toFixed(1)}%`, `Estimated duty: ${backendMoney(dutyAmount, currency)}`],
+        [taxLine?.name || c.taxName, `${taxRate.toFixed(1)}%`, `Estimated tax: ${backendMoney(taxAmount, currency)}`],
+        ["Certificate", certificateName(), `Authority: ${c.authority}`],
+        ["Processing", c.time, "Estimated certificate timeline"],
+        ["Landed cost", backendMoney(landed, currency), compliancePackage ? "Computed by backend" : "Run AI check for estimate"]
+      ].map(([label, valueText, sub]) => `
+        <article class="mini-card">
+          <span>${label}</span>
+          <b>${valueText}</b>
+          <span>${sub}</span>
+        </article>
+      `).join("");
+    }
+
+    function renderCertificate() {
+      if (!selectedCountry) return;
+      const c = countries[selectedCountry];
+      const p = product();
+      const restriction = compliancePackage?.restricted_goods;
+      document.getElementById("certificateTitle").textContent = certificateName();
+      document.getElementById("certificateCopy").textContent = compliancePackage
+        ? `${p.name} entering ${selectedCountry}. Status: ${restriction.status}. ${restriction.requirements.join(" ")}`
+        : `${p.name} entering ${selectedCountry}. Authority: ${c.authority}. Estimated processing: ${c.time}.`;
+      const checklist = compliancePackage ? [
+        `Product signal: ${p.signal}`,
+        `HS code: ${compliancePackage.classification.hs6}`,
+        `Local tariff code: ${compliancePackage.classification.local_code}`,
+        `Critic status: ${compliancePackage.critic.status}`,
+        `Evidence sources: ${compliancePackage.evidence_pack.length}`
+      ] : [
+        `Product signal: ${p.signal}`,
+        `Authority: ${c.authority}`,
+        `Processing time: ${c.time}`,
+        "Run AI check for source-backed validation"
+      ];
+      document.getElementById("checklist").innerHTML = checklist.map(item => `<div class="check"><i class="tick">✓</i><span>${item}</span></div>`).join("");
+      renderCritic();
+    }
+
+    function renderRegistration() {
+      if (!selectedCountry) return;
+      const p = product();
+      const fields = compliancePackage?.auto_filled_fields?.fields || {};
+      document.getElementById("certificateType").value = certificateName();
+      document.getElementById("productName").value = fields.product_description || p.name;
+      document.getElementById("hsCode").value = fields.hs6 || compliancePackage?.classification?.hs6 || p.hs;
+      document.getElementById("productDescription").value = compliancePackage
+        ? `${compliancePackage.classification.description}\nLocal tariff code: ${compliancePackage.classification.local_code}\nCustoms value: ${backendMoney(fields.customs_value, fields.currency)}\nLanded cost: ${backendMoney(fields.landed_cost_estimate, fields.currency)}`
+        : `${p.description} Destination: ${selectedCountry}.`;
+    }
+
+    function renderDocs() {
+      if (!selectedCountry) return;
+      const p = product();
+      const docs = compliancePackage ? compliancePackage.documents_required.map(doc => [
+        doc.name,
+        `${doc.purpose} Source: ${doc.source_ids.join(", ")}`
+      ]) : [
+        ["Commercial invoice", "Generated from seller and shipment data"],
+        ["Certificate registration form", certificateName()],
+        ["Product specification sheet", p.description],
+        ["Business profile", "Company and contact fields included"],
+        ["Customs declaration draft", `${selectedCountry} submission package`]
+      ];
+      document.getElementById("docList").innerHTML = docs.map(([name, copy]) => `
+        <article class="doc">
+          <div><b>${name}</b><span>${copy}</span></div>
+          <i class="doc-state">Ready</i>
+        </article>
+      `).join("");
+    }
+
+
+    function renderCritic() {
+      const summary = document.getElementById("criticSummary");
+      const issues = document.getElementById("criticIssues");
+      if (!summary || !issues) return;
+      if (!compliancePackage) {
+        summary.textContent = "Run the AI compliance check to validate evidence and calculations.";
+        issues.innerHTML = "";
+        return;
+      }
+      summary.textContent = [
+        `Workflow: ${compliancePackage.workflow_status}`,
+        `Critic: ${compliancePackage.critic.status}`,
+        `Checks: ${compliancePackage.critic.checks.join("; ") || "No checks returned"}`,
+        `Evidence: ${compliancePackage.evidence_pack.map(item => item.source_name).join(" | ")}`
+      ].join("\n");
+      issues.innerHTML = compliancePackage.critic.issues.length
+        ? compliancePackage.critic.issues.map(issue => `<div>${issue}</div>`).join("")
+        : `<div style="border-color:#cfead9;background:#f0fbf5;color:#146c43;">No critic issues. Output is ready for demo review.</div>`;
+    }
+
+    function renderAll() {
+      renderCountries();
+      renderTax();
+      renderCertificate();
+      renderRegistration();
+      renderDocs();
+    }
+
+    countryGrid.addEventListener("click", event => {
+      const button = event.target.closest("[data-country]");
+      if (!button) return;
+      selectedCountry = button.dataset.country;
+      countryDetailsCollapsed = true;
+      compliancePackage = null;
+      syncShipmentText();
+      renderAll();
+      chatPanel.classList.add("open");
+      clearInterval(mascotTimer);
+      botLauncher.style.setProperty("--bot-x", `${Math.max(16, window.innerWidth - 150)}px`);
+      botLauncher.style.setProperty("--bot-y", `${Math.max(92, window.innerHeight - 132)}px`);
+      addBubble("agent", `${selectedCountry} selected. Please describe your product and take or upload a product photo. I will use OpenAI vision to identify it, confirm the product facts, and fill the customs-clearance fields.`);
+    });
+
+    document.getElementById("detailToggle").addEventListener("click", () => {
+      countryDetailsCollapsed = !countryDetailsCollapsed;
+      renderAll();
+    });
+
+    document.querySelectorAll("[data-next]").forEach(button => button.addEventListener("click", async () => {
+      if (step === 1 && !compliancePackage) {
+        const result = await runComplianceCheck();
+        if (!result || result.workflow_status === "needs_user_input") return;
+      }
+      goToStep(step + 1);
+    }));
+    document.querySelectorAll("[data-back]").forEach(button => button.addEventListener("click", () => setStep(step - 1)));
+
+    document.getElementById("productType").addEventListener("change", () => {
+      detectedProductFacts = null;
+      compliancePackage = null;
+      syncShipmentText();
+      renderAll();
+      addBubble("agent", `Product changed to ${product().name}. I refreshed certificate and document requirements.`);
+    });
+    ["productDescriptionInput", "quantity", "unitValue", "currency", "originCountry", "invoiceNumber", "sellerName", "consigneeName"].forEach(id => {
+      document.getElementById(id).addEventListener("input", () => {
+        compliancePackage = null;
+        syncShipmentText();
+        renderAll();
+      });
+      document.getElementById(id).addEventListener("change", () => {
+        compliancePackage = null;
+        syncShipmentText();
+        renderAll();
+      });
+    });
+
+    document.getElementById("runBackendCheck").addEventListener("click", runComplianceCheck);
+
+    document.getElementById("productPhoto").addEventListener("change", event => {
+      const file = event.target.files?.[0];
+      detectedProductFacts = null;
+      compliancePackage = null;
+      const preview = document.getElementById("photoPreview");
+      if (!file) {
+        preview.textContent = "Take or upload a product photo. If no photo is provided, the product description is used as the fallback.";
+      } else {
+        const img = document.createElement("img");
+        img.alt = "Uploaded product preview";
+        img.src = URL.createObjectURL(file);
+        preview.innerHTML = "";
+        preview.appendChild(img);
+      }
+      renderAll();
+    });
+
+    document.getElementById("botLauncher").addEventListener("click", () => {
+      if (draggingMascot || mascotWasDragged) {
+        mascotWasDragged = false;
+        return;
+      }
+      chatPanel.classList.toggle("open");
+      if (chatPanel.classList.contains("open")) {
+        clearInterval(mascotTimer);
+        botLauncher.style.setProperty("--bot-x", `${Math.max(16, window.innerWidth - 150)}px`);
+        botLauncher.style.setProperty("--bot-y", `${Math.max(92, window.innerHeight - 132)}px`);
+      } else {
+        startMascotWander();
+      }
+    });
+    document.getElementById("closeChat").addEventListener("click", () => {
+      chatPanel.classList.remove("open");
+      startMascotWander();
+    });
+
+    botLauncher.addEventListener("pointerdown", event => {
+      draggingMascot = true;
+      mascotWasDragged = false;
+      clearInterval(mascotTimer);
+      botLauncher.classList.add("dragging");
+      botLauncher.setPointerCapture(event.pointerId);
+      const rect = botLauncher.getBoundingClientRect();
+      dragOffsetX = event.clientX - rect.left;
+      dragOffsetY = event.clientY - rect.top;
+      dragStartX = event.clientX;
+      dragStartY = event.clientY;
+    });
+
+    botLauncher.addEventListener("pointermove", event => {
+      if (!draggingMascot) return;
+      if (Math.hypot(event.clientX - dragStartX, event.clientY - dragStartY) > 6) {
+        mascotWasDragged = true;
+      }
+      setMascotPosition(event.clientX - dragOffsetX, event.clientY - dragOffsetY);
+    });
+
+    botLauncher.addEventListener("pointerup", event => {
+      if (!draggingMascot) return;
+      draggingMascot = false;
+      botLauncher.classList.remove("dragging");
+      botLauncher.releasePointerCapture(event.pointerId);
+    });
+
+    botLauncher.addEventListener("pointercancel", () => {
+      draggingMascot = false;
+      botLauncher.classList.remove("dragging");
+    });
+
+    document.getElementById("pauseMascot").addEventListener("click", () => {
+      pauseMascot(!mascotPaused);
+    });
+
+    document.getElementById("pauseMascotFloating").addEventListener("click", event => {
+      event.stopPropagation();
+      pauseMascot(!mascotPaused);
+    });
+
+    document.querySelectorAll("[data-quick]").forEach(button => {
+      button.addEventListener("click", () => {
+        const action = button.dataset.quick;
+        if (action === "tax" && !selectedCountry) addBubble("agent", "Choose a country first, then I can explain tax.");
+        if (action === "tax" && selectedCountry) addBubble("agent", `${selectedCountry}: duty ${countries[selectedCountry].duty}%, ${countries[selectedCountry].taxName} ${countries[selectedCountry].tax}%.`);
+        if (action === "cert") { goToStep(1); if (selectedCountry) addBubble("agent", `Requirement found: ${certificateName()}.`); }
+        if (action === "fill") { goToStep(2); addBubble("agent", `I filled the ${certificateName()} registration form.`); }
+        if (action === "docs") { goToStep(3); addBubble("agent", "I prepared the required documents for PDF download."); }
+      });
+    });
+
+    document.getElementById("chatForm").addEventListener("submit", event => {
+      event.preventDefault();
+      const input = document.getElementById("chatInput");
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = "";
+      addBubble("user", text);
+      const lower = text.toLowerCase();
+      Object.keys(countries).forEach(country => {
+        if (lower.includes(country.toLowerCase())) selectedCountry = country;
+      });
+      if (lower.includes("earbud") || lower.includes("earphone")) document.getElementById("productType").value = "wireless_earbuds";
+      if (lower.includes("speaker") || lower.includes("bluetooth")) document.getElementById("productType").value = "bluetooth_speaker";
+      if (lower.includes("watch")) document.getElementById("productType").value = "smartwatch";
+      if (lower.includes("charger") || lower.includes("adapter")) document.getElementById("productType").value = "phone_charger";
+      compliancePackage = null;
+      syncShipmentText();
+      renderAll();
+      if (lower.includes("certificate") || lower.includes("requirement") || lower.includes("sirim") || lower.includes("bpom")) {
+        goToStep(1);
+        addBubble("agent", `For ${product().name} entering ${selectedCountry}, you need: ${certificateName()}.`);
+      } else if (lower.includes("fill") || lower.includes("registration")) {
+        goToStep(2);
+        addBubble("agent", `I filled the registration form for ${certificateName()}.`);
+      } else if (lower.includes("document") || lower.includes("pdf") || lower.includes("submit")) {
+        goToStep(3);
+        addBubble("agent", "I prepared the documents and PDF pack.");
+      } else {
+        addBubble("agent", `I updated your market and product context. Current destination: ${selectedCountry}.`);
+      }
+    });
+
+    document.getElementById("downloadPdf").addEventListener("click", () => {
+      addBubble("agent", "Opening print preview for PDF download.");
+      window.print();
+    });
+
+    initDolphins();
+    syncShipmentText();
+    checkBackendHealth();
+    renderAll();
+    startMascotWander();
+    window.addEventListener("resize", () => moveMascot(false));
+  </script>
+</body>
+</html>
+

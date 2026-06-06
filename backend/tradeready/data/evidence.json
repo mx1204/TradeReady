@@ -1,0 +1,208 @@
+[
+  {
+    "id": "class_wireless_earbuds",
+    "jurisdiction": "GLOBAL",
+    "rule_type": "classification",
+    "source_name": "WCO Harmonized System Nomenclature 2022",
+    "source_url": "https://www.wcoomd.org/en/topics/nomenclature/instrument-and-tools/hs-nomenclature-2022-edition.aspx",
+    "retrieved_at": "2026-06-06T11:45:00+08:00",
+    "summary": "Demo HS mapping for headphones and earphones, including wireless earbuds.",
+    "tags": ["wireless_earbuds", "electronics", "audio", "wireless"],
+    "data": {
+      "category": "wireless_earbuds",
+      "hs6": "8518.30",
+      "local_code_malaysia": "8518300000",
+      "local_code_singapore": "85183000",
+      "description": "Headphones and earphones, whether or not combined with a microphone, and sets consisting of a microphone and one or more loudspeakers."
+    }
+  },
+  {
+    "id": "class_bluetooth_speaker",
+    "jurisdiction": "GLOBAL",
+    "rule_type": "classification",
+    "source_name": "WCO Harmonized System Nomenclature 2022",
+    "source_url": "https://www.wcoomd.org/en/topics/nomenclature/instrument-and-tools/hs-nomenclature-2022-edition.aspx",
+    "retrieved_at": "2026-06-06T11:45:00+08:00",
+    "summary": "Demo HS mapping for single loudspeakers, including portable Bluetooth speakers.",
+    "tags": ["bluetooth_speaker", "electronics", "audio", "wireless"],
+    "data": {
+      "category": "bluetooth_speaker",
+      "hs6": "8518.21",
+      "local_code_malaysia": "8518210000",
+      "local_code_singapore": "85182100",
+      "description": "Single loudspeakers, mounted in their enclosures."
+    }
+  },
+  {
+    "id": "class_smartwatch",
+    "jurisdiction": "GLOBAL",
+    "rule_type": "classification",
+    "source_name": "WCO Harmonized System Nomenclature 2022",
+    "source_url": "https://www.wcoomd.org/en/topics/nomenclature/instrument-and-tools/hs-nomenclature-2022-edition.aspx",
+    "retrieved_at": "2026-06-06T11:45:00+08:00",
+    "summary": "Demo HS mapping for connected smartwatches with data transmission capability.",
+    "tags": ["smartwatch", "electronics", "wireless", "battery"],
+    "data": {
+      "category": "smartwatch",
+      "hs6": "8517.62",
+      "local_code_malaysia": "8517620000",
+      "local_code_singapore": "85176200",
+      "description": "Machines for the reception, conversion and transmission or regeneration of voice, images or other data."
+    }
+  },
+  {
+    "id": "class_phone_charger",
+    "jurisdiction": "GLOBAL",
+    "rule_type": "classification",
+    "source_name": "WCO Harmonized System Nomenclature 2022",
+    "source_url": "https://www.wcoomd.org/en/topics/nomenclature/instrument-and-tools/hs-nomenclature-2022-edition.aspx",
+    "retrieved_at": "2026-06-06T11:45:00+08:00",
+    "summary": "Demo HS mapping for phone chargers and USB power adapters as static converters.",
+    "tags": ["phone_charger", "electronics", "power"],
+    "data": {
+      "category": "phone_charger",
+      "hs6": "8504.40",
+      "local_code_malaysia": "8504400000",
+      "local_code_singapore": "85044000",
+      "description": "Static converters."
+    }
+  },
+  {
+    "id": "my_tax_electronics_demo",
+    "jurisdiction": "Malaysia",
+    "rule_type": "tax",
+    "source_name": "Royal Malaysian Customs Department / MySST",
+    "source_url": "https://mysst.customs.gov.my/",
+    "retrieved_at": "2026-06-06T11:45:00+08:00",
+    "summary": "Demo electronics import calculation rule for Malaysia. Uses 0% import duty and 10% sales tax as a cached MVP rate for supported electronics categories.",
+    "tags": ["electronics", "tax", "sst"],
+    "data": {
+      "import_duty_rate": 0.0,
+      "tax_name": "Sales Tax",
+      "tax_rate": 0.10
+    }
+  },
+  {
+    "id": "sg_tax_electronics_demo",
+    "jurisdiction": "Singapore",
+    "rule_type": "tax",
+    "source_name": "Singapore Customs GST",
+    "source_url": "https://www.customs.gov.sg/businesses/valuation-duties-taxes-fees/goods-and-services-tax-gst/",
+    "retrieved_at": "2026-06-06T11:45:00+08:00",
+    "summary": "Demo electronics import calculation rule for Singapore. Uses 0% import duty and 9% GST as a cached MVP rate for supported electronics categories.",
+    "tags": ["electronics", "tax", "gst"],
+    "data": {
+      "import_duty_rate": 0.0,
+      "tax_name": "GST",
+      "tax_rate": 0.09
+    }
+  },
+  {
+    "id": "my_restriction_wireless",
+    "jurisdiction": "Malaysia",
+    "rule_type": "restriction",
+    "source_name": "SIRIM QAS - Communication, Multimedia and Hybrid Product",
+    "source_url": "https://www.sirim-qas.com.my/service/communication-multimedia-and-hybrid-product/",
+    "retrieved_at": "2026-06-06T11:45:00+08:00",
+    "summary": "Wireless communications products entering Malaysia may require type approval or certificate of approval through SIRIM/MCMC processes.",
+    "tags": ["wireless", "electronics", "sirim", "mcmc"],
+    "data": {
+      "status": "conditional",
+      "requirements": [
+        "Check MCMC/SIRIM communication equipment approval before import.",
+        "Prepare certificate of approval or importer permit if the product is regulated."
+      ],
+      "certification_bodies": ["SIRIM QAS", "MCMC"]
+    }
+  },
+  {
+    "id": "my_restriction_electrical",
+    "jurisdiction": "Malaysia",
+    "rule_type": "restriction",
+    "source_name": "SIRIM QAS - Electrical and Electronics",
+    "source_url": "https://www.sirim-qas.com.my/industry/regulated-products/electrical-electronics/",
+    "retrieved_at": "2026-06-06T11:45:00+08:00",
+    "summary": "Regulated electrical and electronic products entering Malaysia may require SIRIM approval.",
+    "tags": ["electronics", "electrical", "sirim", "charger"],
+    "data": {
+      "status": "conditional",
+      "requirements": [
+        "Check whether the electrical product requires SIRIM approval before import."
+      ],
+      "certification_bodies": ["SIRIM QAS"]
+    }
+  },
+  {
+    "id": "sg_restriction_wireless",
+    "jurisdiction": "Singapore",
+    "rule_type": "restriction",
+    "source_name": "IMDA Dealer and Equipment Registration Framework",
+    "source_url": "https://www.imda.gov.sg/regulations-and-licensing-listing/dealer-and-equipment-registration-framework/tradenet-list-of-ahtn-codes",
+    "retrieved_at": "2026-06-06T11:45:00+08:00",
+    "summary": "Telecommunication equipment imports into Singapore may require IMDA registration, licensing, or TradeNet-related checks.",
+    "tags": ["wireless", "electronics", "imda"],
+    "data": {
+      "status": "conditional",
+      "requirements": [
+        "Check IMDA equipment registration or dealer licensing before import.",
+        "Confirm whether the AHTN code is linked to IMDA control in TradeNet."
+      ],
+      "certification_bodies": ["IMDA"]
+    }
+  },
+  {
+    "id": "sg_restriction_controlled_goods",
+    "jurisdiction": "Singapore",
+    "rule_type": "restriction",
+    "source_name": "Singapore Customs Controlled and Prohibited Goods",
+    "source_url": "https://www.customs.gov.sg/businesses/importing-goods/import-procedures/controlled-prohibited-goods/",
+    "retrieved_at": "2026-06-06T11:45:00+08:00",
+    "summary": "Controlled goods imported into Singapore require authorization from the relevant competent authority before import.",
+    "tags": ["controlled_goods", "electronics", "import"],
+    "data": {
+      "status": "conditional",
+      "requirements": [
+        "Check whether the product is controlled by a competent authority before import."
+      ],
+      "certification_bodies": ["Relevant Singapore competent authority"]
+    }
+  },
+  {
+    "id": "my_documents_import",
+    "jurisdiction": "Malaysia",
+    "rule_type": "documents",
+    "source_name": "Royal Malaysian Customs Department - Import Procedures",
+    "source_url": "https://www.customs.gov.my/en/business/import",
+    "retrieved_at": "2026-06-06T11:45:00+08:00",
+    "summary": "Demo document set for Malaysia import clearance.",
+    "tags": ["documents", "import", "k1"],
+    "data": {
+      "declaration_type": "Malaysia Customs K1-style import declaration data",
+      "documents": [
+        {"name": "Commercial invoice", "purpose": "Supports declared value and product description."},
+        {"name": "Packing list", "purpose": "Supports quantity and shipment details."},
+        {"name": "Import declaration data pack", "purpose": "K1-style customs declaration fields for broker or platform submission."},
+        {"name": "Certificate or permit if regulated", "purpose": "Required when SIRIM/MCMC or another authority applies."}
+      ]
+    }
+  },
+  {
+    "id": "sg_documents_import",
+    "jurisdiction": "Singapore",
+    "rule_type": "documents",
+    "source_name": "Singapore Customs Import Procedures",
+    "source_url": "https://www.customs.gov.sg/businesses/importing-goods/import-procedures/",
+    "retrieved_at": "2026-06-06T11:45:00+08:00",
+    "summary": "Demo document set for Singapore import clearance.",
+    "tags": ["documents", "import", "tradenet"],
+    "data": {
+      "declaration_type": "Singapore TradeNet-style import declaration fields",
+      "documents": [
+        {"name": "Commercial invoice", "purpose": "Supports declared value and product description."},
+        {"name": "Packing list or airway bill", "purpose": "Supports logistics and shipment details."},
+        {"name": "Customs permit or TradeNet declaration fields", "purpose": "Primary Singapore import declaration path."},
+        {"name": "Competent authority approval if controlled", "purpose": "Required if IMDA or another authority controls the product."}
+      ]
+    }
+  }
+]
