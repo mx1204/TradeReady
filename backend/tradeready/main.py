@@ -5,7 +5,9 @@ from typing import Annotated
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
-from .models import ComplianceRunRequest, SwitchDestinationRequest
+from .agents import classification_agent, classification_preview_critic_agent, restriction_agent
+from .evidence import evidence_by_id
+from .models import ClassificationPreviewRequest, ClassificationPreviewResult, ComplianceRunRequest, SwitchDestinationRequest
 from .orchestrator import create_compliance_run, get_run, switch_destination
 from .vision import identify_product
 
@@ -51,6 +53,31 @@ async def product_identification(
             ),
         )
     return result
+
+
+@app.post("/api/classification-preview")
+def classification_preview(request: ClassificationPreviewRequest):
+    product_confirmed = request.product_confirmed or request.product_facts.confirmed
+    product_facts = request.product_facts.model_copy(update={"confirmed": product_confirmed})
+    classification = classification_agent(product_facts, request.destination_country)
+    restriction = restriction_agent(product_facts, request.destination_country)
+    critic = classification_preview_critic_agent(
+        product_facts,
+        product_confirmed,
+        classification,
+        restriction,
+    )
+    evidence_ids: set[str] = set()
+    evidence_ids.update(classification.source_ids)
+    evidence_ids.update(restriction.source_ids)
+    return ClassificationPreviewResult(
+        workflow_status="human_review_required" if critic.status == "human_review_required" else "ready",
+        product_facts=product_facts,
+        classification=classification,
+        restricted_goods=restriction,
+        evidence_pack=evidence_by_id(evidence_ids),
+        critic=critic,
+    )
 
 
 @app.post("/api/compliance-runs")

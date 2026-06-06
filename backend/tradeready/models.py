@@ -63,6 +63,12 @@ class ComplianceRunRequest(BaseModel):
     shipment: ShipmentDetails | None = None
 
 
+class ClassificationPreviewRequest(BaseModel):
+    product_facts: ProductFacts
+    product_confirmed: bool = False
+    destination_country: str
+
+
 class SwitchDestinationRequest(BaseModel):
     new_destination_country: str
 
@@ -141,6 +147,15 @@ class NeedsInputResult(BaseModel):
     message: str
     product_facts: ProductFacts | None = None
     shipment: ShipmentDetails | None = None
+    critic: CriticResult
+
+
+class ClassificationPreviewResult(BaseModel):
+    workflow_status: Literal["ready", "human_review_required"] = "ready"
+    product_facts: ProductFacts
+    classification: ClassificationResult
+    restricted_goods: RestrictedGoodsResult
+    evidence_pack: list[EvidenceItem]
     critic: CriticResult
 
 

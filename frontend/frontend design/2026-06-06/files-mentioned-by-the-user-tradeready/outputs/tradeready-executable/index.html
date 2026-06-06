@@ -1512,6 +1512,7 @@
     let countryDetailsCollapsed = false;
     let compliancePackage = null;
     let detectedProductFacts = null;
+    let classificationPreview = null;
     let mascotTimer;
     let mascotPaused = false;
     let draggingMascot = false;
@@ -1536,7 +1537,7 @@
     }
 
     function hasDetectedProduct() {
-      return Boolean(compliancePackage || detectedProductFacts);
+      return Boolean(compliancePackage || classificationPreview || detectedProductFacts);
     }
 
     function money(value) {
@@ -1722,14 +1723,39 @@
       return detectedProductFacts;
     }
 
+    async function runClassificationPreview(facts) {
+      const response = await fetch(`${API_BASE}/api/classification-preview`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          product_confirmed: true,
+          product_facts: facts,
+          destination_country: selectedCountry
+        })
+      });
+      if (!response.ok) {
+        let message = "Classification preview failed.";
+        try {
+          const error = await response.json();
+          message = error.detail || message;
+        } catch {
+          message = response.statusText || message;
+        }
+        throw new Error(message);
+      }
+      return response.json();
+    }
+
     async function analyzePhotoForForm() {
       const button = document.getElementById("runBackendCheck");
       button.disabled = true;
       button.textContent = "Analyzing photo...";
       try {
         const facts = await identifyProductFromPhoto();
+        classificationPreview = await runClassificationPreview(facts);
         compliancePackage = null;
         renderAll();
+        addBubble("agent", `HS code filled by classification agent: ${classificationPreview.classification.hs6}. Critic status: ${classificationPreview.critic.status}.`);
         return facts;
       } catch (error) {
         addBubble("agent", `Photo analysis stopped: ${error.message}`);
@@ -1808,6 +1834,9 @@
       if (!selectedCountry) return "Select a country first";
       if (compliancePackage?.restricted_goods?.certification_bodies?.length) {
         return compliancePackage.restricted_goods.certification_bodies.join(" / ");
+      }
+      if (classificationPreview?.restricted_goods?.certification_bodies?.length) {
+        return classificationPreview.restricted_goods.certification_bodies.join(" / ");
       }
       if (!hasDetectedProduct()) return "No product detected yet";
       return countries[selectedCountry].cert;
@@ -1890,12 +1919,19 @@
         chatPanel.classList.add("open");
         return;
       }
-      const titles = ["", "Collecting product evidence", "Filling customs clearance form", "Preparing document pack"];
-      const copies = ["", `Please describe the product and upload a photo for ${selectedCountry}.`, `Using AI-detected product facts and ${certificateName()} fields.`, "Bringing all submission files into your program."];
+      const titles = ["", "Filling customs clearance form", "Filling customs clearance form", "Preparing document pack"];
+      const copies = [
+        "",
+        `Using AI-detected product facts and ${selectedCountry} customs fields.`,
+        `Using AI-detected product facts and ${certificateName()} fields.`,
+        "Bringing all submission files into your program."
+      ];
       document.getElementById("transitionTitle").textContent = titles[nextStep] || "Opening next step";
       document.getElementById("transitionCopy").textContent = copies[nextStep] || "TradeReady is preparing the next screen.";
       document.getElementById("destinationBubble").textContent = countries[selectedCountry]?.code || "GO";
       document.getElementById("destinationFlag").className = `flag ${countries[selectedCountry]?.flag || "my"}`;
+      transitionLayer.classList.remove("active");
+      void transitionLayer.offsetWidth;
       transitionLayer.classList.add("active");
       const fish = document.querySelector(".transition-layer .swim-fish");
       const destination = document.querySelector(".destination-bubble");
@@ -1964,7 +2000,7 @@
 
     function renderCertificate() {
       if (!selectedCountry) return;
-      const restriction = compliancePackage?.restricted_goods;
+      const restriction = compliancePackage?.restricted_goods || classificationPreview?.restricted_goods;
       const tag = document.getElementById("certificateTag");
       if (!hasDetectedProduct()) {
         if (tag) tag.textContent = "Waiting for photo";
@@ -1980,17 +2016,25 @@
         return;
       }
       const p = product();
-      if (tag) tag.textContent = compliancePackage ? "Requirement found" : "Photo detected";
+      if (tag) tag.textContent = compliancePackage ? "Requirement found" : classificationPreview ? "HS verified" : "Photo detected";
       document.getElementById("certificateTitle").textContent = certificateName();
       document.getElementById("certificateCopy").textContent = compliancePackage
         ? `${p.name} entering ${selectedCountry}. Status: ${restriction.status}. ${restriction.requirements.join(" ")}`
-        : `${p.name} was detected by OpenAI vision. Run the compliance check to generate source-backed customs requirements for ${selectedCountry}.`;
+        : classificationPreview
+          ? `${p.name} entering ${selectedCountry}. HS code ${classificationPreview.classification.hs6} was filled by the classification agent. Critic status: ${classificationPreview.critic.status}.`
+          : `${p.name} was detected by OpenAI vision. Run the classification agent to fill HS code for ${selectedCountry}.`;
       const checklist = compliancePackage ? [
         `Product signal: ${p.signal}`,
         `HS code: ${compliancePackage.classification.hs6}`,
         `Local tariff code: ${compliancePackage.classification.local_code}`,
         `Critic status: ${compliancePackage.critic.status}`,
         `Evidence sources: ${compliancePackage.evidence_pack.length}`
+      ] : classificationPreview ? [
+        `Detected product: ${detectedProductFacts.label || p.name}`,
+        `HS code: ${classificationPreview.classification.hs6}`,
+        `Local tariff code: ${classificationPreview.classification.local_code}`,
+        `Classification critic: ${classificationPreview.critic.status}`,
+        `Evidence sources: ${classificationPreview.evidence_pack.length}`
       ] : [
         `Detected product: ${detectedProductFacts.label || p.name}`,
         `Detected category: ${detectedProductFacts.category}`,
@@ -2008,14 +2052,23 @@
       if (!compliancePackage) {
         document.getElementById("productName").value = detectedProductFacts?.label || "";
         document.getElementById("productCategory").value = detectedProductFacts?.category || "";
-        document.getElementById("certificateType").value = "";
-        document.getElementById("hsCode").value = "";
-        document.getElementById("localTariffCode").value = "";
+        document.getElementById("certificateType").value = classificationPreview ? certificateName() : "";
+        document.getElementById("hsCode").value = classificationPreview?.classification?.hs6 || "";
+        document.getElementById("localTariffCode").value = classificationPreview?.classification?.local_code || "";
         document.getElementById("productDescription").value = detectedProductFacts
-          ? (document.getElementById("productDescriptionInput")?.value.trim() || detectedProductFacts.label || "")
+          ? (classificationPreview?.classification?.description || document.getElementById("productDescriptionInput")?.value.trim() || detectedProductFacts.label || "")
           : "";
-        document.getElementById("calculatedFieldsSummary").textContent = detectedProductFacts
-          ? "Photo detection completed. Fill shipment fields, then click Next to run the compliance check."
+        document.getElementById("calculatedFieldsSummary").textContent = classificationPreview
+          ? [
+              `HS classification: ${classificationPreview.classification.hs6}`,
+              `Local tariff code: ${classificationPreview.classification.local_code}`,
+              `Classification critic: ${classificationPreview.critic.status}`,
+              `Checks: ${classificationPreview.critic.checks.join("; ") || "No checks returned"}`,
+              classificationPreview.critic.issues.length ? `Issues: ${classificationPreview.critic.issues.join("; ")}` : "Issues: none",
+              `Evidence: ${classificationPreview.evidence_pack.map(item => item.source_name).join(" | ") || "No evidence returned"}`
+            ].join("\n")
+          : detectedProductFacts
+            ? "Photo detection completed. Fill shipment fields, then click Next to run the compliance check."
           : "Upload a photo and run detection before customs fields are filled.";
         return;
       }
@@ -2057,7 +2110,21 @@
       const issues = document.getElementById("criticIssues");
       if (!summary || !issues) return;
       if (!compliancePackage) {
-        summary.textContent = "Run the AI compliance check to validate evidence and calculations.";
+        if (classificationPreview) {
+          summary.textContent = [
+            `Classification preview: ${classificationPreview.workflow_status}`,
+            `Critic: ${classificationPreview.critic.status}`,
+            `HS code: ${classificationPreview.classification.hs6}`,
+            `Local tariff code: ${classificationPreview.classification.local_code}`,
+            `Checks: ${classificationPreview.critic.checks.join("; ") || "No checks returned"}`,
+            `Evidence: ${classificationPreview.evidence_pack.map(item => item.source_name).join(" | ") || "No evidence returned"}`
+          ].join("\n");
+          issues.innerHTML = classificationPreview.critic.issues.length
+            ? classificationPreview.critic.issues.map(issue => `<div>${issue}</div>`).join("")
+            : `<div style="border-color:#cfead9;background:#f0fbf5;color:#146c43;">Classification output verified. Fill shipment fields to run full compliance.</div>`;
+          return;
+        }
+        summary.textContent = "Run photo analysis to fill HS code, then run the AI compliance check to validate evidence and calculations.";
         issues.innerHTML = "";
         return;
       }
@@ -2087,6 +2154,7 @@
       countryDetailsCollapsed = true;
       compliancePackage = null;
       detectedProductFacts = null;
+      classificationPreview = null;
       setDetectedProductSummary("Upload a photo and process it to see the OpenAI vision result.");
       updateBackendDefaultsForDestination();
       syncShipmentText();
@@ -2116,6 +2184,7 @@
     document.getElementById("productType").addEventListener("change", () => {
       detectedProductFacts = null;
       compliancePackage = null;
+      classificationPreview = null;
       syncShipmentText();
       renderAll();
       addBubble("agent", `Product changed to ${product().name}. I refreshed certificate and document requirements.`);
@@ -2124,6 +2193,7 @@
       document.getElementById(id).addEventListener("input", () => {
         if (id === "productDescriptionInput") {
           detectedProductFacts = null;
+          classificationPreview = null;
           setDetectedProductSummary("Product description changed. Analyze the photo again before continuing.");
         }
         compliancePackage = null;
@@ -2133,6 +2203,7 @@
       document.getElementById(id).addEventListener("change", () => {
         if (id === "productDescriptionInput") {
           detectedProductFacts = null;
+          classificationPreview = null;
           setDetectedProductSummary("Product description changed. Analyze the photo again before continuing.");
         }
         compliancePackage = null;
@@ -2147,6 +2218,7 @@
       const file = event.target.files?.[0];
       detectedProductFacts = null;
       compliancePackage = null;
+      classificationPreview = null;
       const preview = document.getElementById("photoPreview");
       if (!file) {
         preview.textContent = "Upload a product photo to run OpenAI vision detection.";

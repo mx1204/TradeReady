@@ -244,6 +244,46 @@ def critic_agent(
     )
 
 
+def classification_preview_critic_agent(
+    product_facts: ProductFacts,
+    product_confirmed: bool,
+    classification: ClassificationResult,
+    restriction: RestrictedGoodsResult,
+) -> CriticResult:
+    issues: list[str] = []
+    checks: list[str] = []
+
+    if not product_confirmed:
+        issues.append("Product identification has not been confirmed by the user.")
+    else:
+        checks.append("Product identity was user-confirmed.")
+
+    if product_facts.category == "unsupported":
+        issues.append("Detected product is outside the supported MVP electronics categories.")
+    elif product_facts.confidence < 0.7:
+        issues.append("Product detection confidence is below the 0.70 review threshold.")
+    else:
+        checks.append("Product detection confidence is above the review threshold.")
+
+    if not classification.source_ids or classification.hs6 == "UNKNOWN":
+        issues.append("HS classification has no supporting evidence.")
+    else:
+        checks.append("HS classification has cached source evidence.")
+
+    if product_facts.wireless and not restriction.source_ids:
+        issues.append("Wireless product detected but no telecom/certification source was found.")
+    elif product_facts.wireless and not restriction.certification_bodies:
+        issues.append("Wireless product detected but no certification body was listed.")
+    elif product_facts.wireless:
+        checks.append("Wireless product triggered telecom/certification checks.")
+
+    return CriticResult(
+        status="human_review_required" if issues else "pass",
+        issues=issues,
+        checks=checks,
+    )
+
+
 def _restriction_from_rule(rule, status: str | None = None) -> RestrictedGoodsResult:
     if not rule:
         return RestrictedGoodsResult(
