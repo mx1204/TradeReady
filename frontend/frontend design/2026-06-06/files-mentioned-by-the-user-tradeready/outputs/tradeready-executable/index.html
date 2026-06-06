@@ -481,7 +481,7 @@
       left: -110px;
       width: 122px;
       height: 96px;
-      z-index: 3;
+      z-index: 5;
       --swim-distance: calc(100vw - 210px);
       animation: fishSwimAcross 2.4s cubic-bezier(.18,.84,.2,1) forwards;
     }
@@ -1746,17 +1746,57 @@
       return response.json();
     }
 
+    function localClassificationPreview(facts, reason) {
+      const p = products[facts.category] || {};
+      return {
+        workflow_status: "human_review_required",
+        product_facts: facts,
+        classification: {
+          hs6: p.hs || "",
+          local_code: "",
+          description: p.description || facts.label || "",
+          rationale: "Local fallback used because the backend classification preview agent was unavailable.",
+          confidence: facts.confidence || 0,
+          source_ids: [],
+          alternatives: []
+        },
+        restricted_goods: {
+          status: "unknown",
+          requirements: [],
+          certification_bodies: [],
+          source_ids: [],
+          notes: [reason]
+        },
+        evidence_pack: [],
+        critic: {
+          status: "human_review_required",
+          issues: [reason, "HS code is filled from local category mapping and must be verified by the backend agent."],
+          checks: []
+        }
+      };
+    }
+
+    async function ensureClassificationPreview() {
+      if (classificationPreview) return classificationPreview;
+      const facts = detectedProductFacts || await identifyProductFromPhoto();
+      try {
+        classificationPreview = await runClassificationPreview(facts);
+      } catch (error) {
+        classificationPreview = localClassificationPreview(facts, error.message);
+      }
+      compliancePackage = null;
+      renderAll();
+      const sourceLabel = classificationPreview.evidence_pack.length ? "classification agent" : "local fallback";
+      addBubble("agent", `HS code filled by ${sourceLabel}: ${classificationPreview.classification.hs6 || "not available"}. Critic status: ${classificationPreview.critic.status}.`);
+      return classificationPreview;
+    }
+
     async function analyzePhotoForForm() {
       const button = document.getElementById("runBackendCheck");
       button.disabled = true;
       button.textContent = "Analyzing photo...";
       try {
-        const facts = await identifyProductFromPhoto();
-        classificationPreview = await runClassificationPreview(facts);
-        compliancePackage = null;
-        renderAll();
-        addBubble("agent", `HS code filled by classification agent: ${classificationPreview.classification.hs6}. Critic status: ${classificationPreview.critic.status}.`);
-        return facts;
+        return await ensureClassificationPreview();
       } catch (error) {
         addBubble("agent", `Photo analysis stopped: ${error.message}`);
         document.getElementById("criticSummary").textContent = error.message;
@@ -1857,6 +1897,11 @@
       });
     }
 
+    function renderDolphin(node) {
+      const template = document.getElementById("dolphinTemplate").innerHTML.trim();
+      if (node) node.innerHTML = template;
+    }
+
     function moveMascot(random = true) {
       if (chatPanel.classList.contains("open") || mascotPaused || draggingMascot) return;
       const maxX = Math.max(16, window.innerWidth - 150);
@@ -1934,6 +1979,7 @@
       void transitionLayer.offsetWidth;
       transitionLayer.classList.add("active");
       const fish = document.querySelector(".transition-layer .swim-fish");
+      renderDolphin(fish.querySelector("[data-dolphin]"));
       const destination = document.querySelector(".destination-bubble");
       const destinationRect = destination.getBoundingClientRect();
       const fishStartX = -110;
@@ -2169,9 +2215,9 @@
     });
 
     document.querySelectorAll("[data-next]").forEach(button => button.addEventListener("click", async () => {
-      if (step === 1 && !detectedProductFacts) {
-        const facts = await analyzePhotoForForm();
-        if (!facts) return;
+      if (step === 1 && !classificationPreview) {
+        const preview = await analyzePhotoForForm();
+        if (!preview) return;
       }
       if (step === 2) {
         const result = await runComplianceCheck();
