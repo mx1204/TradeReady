@@ -179,6 +179,11 @@ def critic_agent(
     else:
         checks.append("Product identity was user-confirmed.")
 
+    if product_facts.category == "unsupported":
+        issues.append("Detected product is outside the supported MVP electronics categories.")
+    if product_facts.confidence < 0.7:
+        issues.append("Product detection confidence is below the 0.70 review threshold.")
+
     if not classification.source_ids or classification.hs6 == "UNKNOWN":
         issues.append("HS classification has no supporting evidence.")
     else:

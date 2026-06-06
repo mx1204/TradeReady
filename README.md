@@ -55,7 +55,7 @@ Recommended setup:
 
 ```text
 OPENAI_API_KEY=sk-your-real-key-here
-OPENAI_VISION_MODEL=gpt-4.1-mini
+OPENAI_VISION_MODEL=gpt-5-mini
 ```
 
 4. Start the merged demo:

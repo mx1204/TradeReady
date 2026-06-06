@@ -24,6 +24,7 @@ class WorkflowTests(unittest.TestCase):
             "portable bluetooth speaker.png": "bluetooth_speaker",
             "smartwatch.webp": "smartwatch",
             "phone charger adapter.jpg": "phone_charger",
+            "navy blue iphone 12 smartphone.png": "smartphone",
         }
         for text, expected in cases.items():
             with self.subTest(text=text):
@@ -87,6 +88,18 @@ class WorkflowTests(unittest.TestCase):
             switched.jurisdiction_diff["duty_tax"]["old_tax"][0]["rate"],
             switched.jurisdiction_diff["duty_tax"]["new_tax"][0]["rate"],
         )
+
+    def test_smartphone_malaysia_generates_validated_package(self):
+        request = ComplianceRunRequest(
+            product_facts=product("smartphone", True, True),
+            product_confirmed=True,
+            destination_country="Malaysia",
+            shipment_text="10 units Navy Blue iPhone 12, SGD 500 each, shipping Singapore to Malaysia",
+        )
+        result = build_compliance_package(request, run_id="demo")
+        self.assertIsInstance(result, CompliancePackage)
+        self.assertEqual(result.classification.hs6, "8517.13")
+        self.assertIn("SIRIM QAS", result.restricted_goods.certification_bodies)
 
 
 if __name__ == "__main__":

@@ -68,6 +68,23 @@
     }
   },
   {
+    "id": "class_smartphone",
+    "jurisdiction": "GLOBAL",
+    "rule_type": "classification",
+    "source_name": "WCO Harmonized System Nomenclature 2022",
+    "source_url": "https://www.wcoomd.org/en/topics/nomenclature/instrument-and-tools/hs-nomenclature-2022-edition.aspx",
+    "retrieved_at": "2026-06-06T11:45:00+08:00",
+    "summary": "Demo HS mapping for smartphones and mobile phone handsets with wireless data transmission capability.",
+    "tags": ["smartphone", "electronics", "wireless", "battery", "mobile_phone"],
+    "data": {
+      "category": "smartphone",
+      "hs6": "8517.13",
+      "local_code_malaysia": "8517130000",
+      "local_code_singapore": "85171300",
+      "description": "Smartphones and other telephones for cellular networks or for other wireless networks."
+    }
+  },
+  {
     "id": "my_tax_electronics_demo",
     "jurisdiction": "Malaysia",
     "rule_type": "tax",

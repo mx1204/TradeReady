@@ -1209,6 +1209,7 @@
               <option value="bluetooth_speaker">Bluetooth speaker</option>
               <option value="smartwatch">Smartwatch</option>
               <option value="phone_charger">Phone charger</option>
+              <option value="smartphone">Smartphone</option>
             </select>
           </div>
           <div class="field full-row">
@@ -1497,6 +1498,12 @@
         hs: "8504.40",
         description: "USB phone charger and static converter for consumer electronics.",
         signal: "Electrical electronics"
+      },
+      smartphone: {
+        name: "Smartphone",
+        hs: "8517.13",
+        description: "Smartphone or mobile phone handset for cellular or wireless networks.",
+        signal: "Wireless electronics"
       }
     };
 
@@ -1551,6 +1558,7 @@
       if (lower.includes("earbud") || lower.includes("earphone") || lower.includes("headphone")) return "wireless_earbuds";
       if (lower.includes("speaker")) return "bluetooth_speaker";
       if (lower.includes("watch")) return "smartwatch";
+      if (lower.includes("iphone") || lower.includes("smartphone") || lower.includes("mobile phone") || lower.includes("cell phone")) return "smartphone";
       if (lower.includes("charger") || lower.includes("adapter")) return "phone_charger";
       return document.getElementById("productType").value;
     }
@@ -1690,6 +1698,8 @@
         document.getElementById("productType").value = detectedProductFacts.category;
       }
       const productLabel = detectedProductFacts.label || products[detectedProductFacts.category]?.name || detectedProductFacts.category;
+      const lowConfidence = (detectedProductFacts.confidence || 0) < 0.7;
+      const unsupportedProduct = detectedProductFacts.category === "unsupported" || !products[detectedProductFacts.category];
       const alternatives = (data.alternatives || [])
         .map(item => `${item.label} (${Math.round((item.confidence || 0) * 100)}%)`)
         .join(", ") || "None returned";
@@ -1701,10 +1711,14 @@
         `Wireless: ${detectedProductFacts.wireless ? "yes" : "no"}`,
         `Battery: ${detectedProductFacts.battery ? "yes" : "no"}`,
         `Alternatives: ${alternatives}`,
+        unsupportedProduct ? "Status: unsupported product category - human review required" : "",
+        lowConfidence ? "Status: low confidence - please verify before continuing" : "",
         data.confirmation_prompt || "Is this product correct?"
-      ].join("\n"));
+      ].filter(Boolean).join("\n"), unsupportedProduct || lowConfidence);
       syncShipmentText();
-      addBubble("agent", `Photo check detected: ${productLabel}. User confirmation captured.`);
+      addBubble("agent", lowConfidence
+        ? `Photo check detected ${productLabel}, but confidence is low. Please verify the form before continuing.`
+        : `Photo check detected: ${productLabel}. User confirmation captured.`);
       return detectedProductFacts;
     }
 

@@ -10,6 +10,7 @@ SUPPORTED_CATEGORIES = {
     "bluetooth_speaker",
     "smartwatch",
     "phone_charger",
+    "smartphone",
 }
 
 SUPPORTED_JURISDICTIONS = {"Malaysia", "Singapore"}
