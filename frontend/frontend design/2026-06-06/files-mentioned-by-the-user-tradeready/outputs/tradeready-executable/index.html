@@ -1454,11 +1454,11 @@
               <input id="certificateType">
             </div>
             <div class="field">
-              <label for="hsCode">HS code <span class="ai-filled">Filled after compliance check</span></label>
+              <label for="hsCode">HS code <span class="ai-filled">Filled after photo analysis</span></label>
               <input id="hsCode">
             </div>
             <div class="field">
-              <label for="localTariffCode">Local tariff code <span class="ai-filled">Filled after compliance check</span></label>
+              <label for="localTariffCode">Local tariff code <span class="ai-filled">Filled after photo analysis</span></label>
               <input id="localTariffCode">
             </div>
           </div>
@@ -1681,6 +1681,7 @@
     let countryDetailsCollapsed = false;
     let compliancePackage = null;
     let detectedProductFacts = null;
+    let classificationPreview = null;
     let mascotTimer;
     let mascotPaused = false;
     let draggingMascot = false;
@@ -1891,6 +1892,40 @@
       return detectedProductFacts;
     }
 
+    async function runClassificationPreview(facts) {
+      if (!selectedCountry) {
+        throw new Error("Please select Malaysia or Singapore before filling HS code.");
+      }
+      const payload = {
+        product_confirmed: true,
+        destination_country: selectedCountry,
+        product_facts: {
+          ...facts,
+          label: facts.label || document.getElementById("productDescriptionInput")?.value.trim() || facts.category,
+          confirmed: true
+        }
+      };
+      const response = await fetch(`${API_BASE}/api/classification-preview`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) {
+        let message = "Classification preview failed.";
+        try {
+          const error = await response.json();
+          message = error.detail || message;
+        } catch {
+          message = response.statusText || message;
+        }
+        throw new Error(message);
+      }
+      classificationPreview = await response.json();
+      renderAll();
+      addBubble("agent", `HS code filled: ${classificationPreview.classification.hs6}. Critic status: ${classificationPreview.critic.status}.`);
+      return classificationPreview;
+    }
+
     async function analyzePhotoForForm() {
       const button = document.getElementById("runBackendCheck");
       button.disabled = true;
@@ -1898,6 +1933,7 @@
       try {
         const facts = await identifyProductFromPhoto();
         compliancePackage = null;
+        await runClassificationPreview(facts);
         renderAll();
         return facts;
       } catch (error) {
@@ -2302,6 +2338,12 @@
         `Local tariff code: ${compliancePackage.classification.local_code}`,
         `Critic status: ${compliancePackage.critic.status}`,
         `Evidence sources: ${compliancePackage.evidence_pack.length}`
+      ] : classificationPreview ? [
+        `Detected product: ${detectedProductFacts.label || p.name}`,
+        `Detected category: ${detectedProductFacts.category}`,
+        `HS code: ${classificationPreview.classification.hs6}`,
+        `Local tariff code: ${classificationPreview.classification.local_code}`,
+        `Classification critic: ${classificationPreview.critic.status}`
       ] : [
         `Detected product: ${detectedProductFacts.label || p.name}`,
         `Detected category: ${detectedProductFacts.category}`,
@@ -2319,14 +2361,19 @@
       if (!compliancePackage) {
         document.getElementById("productName").value = detectedProductFacts?.label || "";
         document.getElementById("productCategory").value = detectedProductFacts?.category || "";
-        document.getElementById("certificateType").value = "";
-        document.getElementById("hsCode").value = "";
-        document.getElementById("localTariffCode").value = "";
+        document.getElementById("certificateType").value = classificationPreview ? certificateName() : "";
+        document.getElementById("hsCode").value = classificationPreview?.classification?.hs6 || "";
+        document.getElementById("localTariffCode").value = classificationPreview?.classification?.local_code || "";
         document.getElementById("productDescription").value = detectedProductFacts
-          ? (document.getElementById("productDescriptionInput")?.value.trim() || detectedProductFacts.label || "")
+          ? (classificationPreview?.classification?.description || document.getElementById("productDescriptionInput")?.value.trim() || detectedProductFacts.label || "")
           : "";
         document.getElementById("calculatedFieldsSummary").textContent = detectedProductFacts
-          ? "Photo detection completed. Fill shipment fields, then click Next to run the compliance check."
+          ? [
+              classificationPreview ? `HS code: ${classificationPreview.classification.hs6}` : "",
+              classificationPreview ? `Local tariff code: ${classificationPreview.classification.local_code}` : "",
+              classificationPreview ? `Classification critic: ${classificationPreview.critic.status}` : "",
+              "Fill shipment fields, then click Next to run the compliance check."
+            ].filter(Boolean).join("\n")
           : "Upload a photo and run detection before customs fields are filled.";
         return;
       }
@@ -2620,6 +2667,20 @@
       const issues = document.getElementById("criticIssues");
       if (!summary || !issues) return;
       if (!compliancePackage) {
+        if (classificationPreview) {
+          summary.textContent = [
+            `Classification preview: ${classificationPreview.workflow_status}`,
+            `Critic: ${classificationPreview.critic.status}`,
+            `HS code: ${classificationPreview.classification.hs6}`,
+            `Local tariff code: ${classificationPreview.classification.local_code}`,
+            `Checks: ${classificationPreview.critic.checks.join("; ") || "No checks returned"}`,
+            `Evidence: ${classificationPreview.evidence_pack.map(item => item.source_name).join(" | ") || "No evidence returned"}`
+          ].join("\n");
+          issues.innerHTML = classificationPreview.critic.issues.length
+            ? classificationPreview.critic.issues.map(issue => `<div>${issue}</div>`).join("")
+            : `<div style="border-color:#cfead9;background:#f0fbf5;color:#146c43;">Classification output verified. Fill shipment fields to run full compliance.</div>`;
+          return;
+        }
         summary.textContent = "Run the AI compliance check to validate evidence and calculations.";
         issues.innerHTML = "";
         return;
@@ -2651,6 +2712,7 @@
       countryDetailsCollapsed = true;
       compliancePackage = null;
       detectedProductFacts = null;
+      classificationPreview = null;
       setDetectedProductSummary("Upload a photo and process it to see the OpenAI vision result.");
       updateBackendDefaultsForDestination();
       syncShipmentText();
@@ -2680,6 +2742,7 @@
     document.getElementById("productType").addEventListener("change", () => {
       detectedProductFacts = null;
       compliancePackage = null;
+      classificationPreview = null;
       syncShipmentText();
       renderAll();
       addBubble("agent", `Product changed to ${product().name}. I refreshed certificate and document requirements.`);
@@ -2688,6 +2751,7 @@
       document.getElementById(id).addEventListener("input", () => {
         if (id === "productDescriptionInput") {
           detectedProductFacts = null;
+          classificationPreview = null;
           setDetectedProductSummary("Product description changed. Analyze the photo again before continuing.");
         }
         compliancePackage = null;
@@ -2697,6 +2761,7 @@
       document.getElementById(id).addEventListener("change", () => {
         if (id === "productDescriptionInput") {
           detectedProductFacts = null;
+          classificationPreview = null;
           setDetectedProductSummary("Product description changed. Analyze the photo again before continuing.");
         }
         compliancePackage = null;
@@ -2711,6 +2776,7 @@
       const file = event.target.files?.[0];
       detectedProductFacts = null;
       compliancePackage = null;
+      classificationPreview = null;
       const preview = document.getElementById("photoPreview");
       if (!file) {
         preview.textContent = "Upload a product photo to run OpenAI vision detection.";
