@@ -129,6 +129,14 @@ def _local_reply(request: ChatRequest, suggested_fields: dict[str, object] | Non
             f"{fill_note}"
         )
 
+    if any(phrase in text for phrase in ["fill form", "fill the form", "fill up the form", "complete form", "complete the form"]):
+        return (
+            "I can fill the form after you give me the field values. "
+            "For example: quantity is 200, unit value is 1600 SGD, origin is Malaysia, "
+            "seller is Jason, buyer is Nora, invoice is TR-001."
+            f"{fill_note}"
+        )
+
     if any(word in text for word in ["tax", "gst", "sst", "duty", "cost"]):
         return (
             f"For {destination}, the compliance run calculates customs value from quantity and unit value, "
@@ -198,17 +206,31 @@ def _extract_form_fields(message: str) -> dict[str, object]:
     if origin_match:
         fields["originCountry"] = _country_name(origin_match.group(1))
 
-    invoice_match = re.search(r"\b(?:invoice|invoice\s+number|inv)\s*(?:is|no\.?|number|#|:)?\s*([A-Z0-9][A-Z0-9._/-]{1,40})\b", text, re.I)
+    invoice_match = re.search(
+        r"\b(?:invoice\s*(?:number|no\.?)?|inv)\s*(?:is|:|#)?\s*([A-Z0-9][A-Z0-9._/-]{1,40})\b",
+        text,
+        re.I,
+    )
     if invoice_match:
         fields["invoiceNumber"] = invoice_match.group(1)
 
-    seller_match = re.search(r"\b(?:seller|shipper|exporter)\s*(?:is|:)\s*([^,.;\n]+)", text, re.I)
+    seller_match = re.search(
+        r"\b(?:seller|shipper|exporter)\s*(?:is|:)?\s*([^,.;\n]+?)"
+        r"(?=\s+\b(?:buyer|consignee|importer|invoice|origin|country|quantity|unit|price|currency)\b|[,.;\n]|$)",
+        text,
+        re.I,
+    )
     if seller_match:
-        fields["sellerName"] = seller_match.group(1).strip()
+        fields["sellerName"] = _clean_party_name(seller_match.group(1))
 
-    buyer_match = re.search(r"\b(?:buyer|consignee|importer)\s*(?:is|:)\s*([^,.;\n]+)", text, re.I)
+    buyer_match = re.search(
+        r"\b(?:buyer|consignee|importer)\s*(?:is|:)?\s*([^,.;\n]+?)"
+        r"(?=\s+\b(?:seller|shipper|exporter|invoice|origin|country|quantity|unit|price|currency)\b|[,.;\n]|$)",
+        text,
+        re.I,
+    )
     if buyer_match:
-        fields["consigneeName"] = buyer_match.group(1).strip()
+        fields["consigneeName"] = _clean_party_name(buyer_match.group(1))
 
     description_match = re.search(r"\b(?:product|description|item)\s*(?:is|:)\s*([^.;\n]+)", text, re.I)
     if description_match:
@@ -221,3 +243,7 @@ def _extract_form_fields(message: str) -> dict[str, object]:
 
 def _country_name(value: str) -> str:
     return "Singapore" if value.lower().startswith("sing") else "Malaysia"
+
+
+def _clean_party_name(value: str) -> str:
+    return value.strip().strip("\"'")

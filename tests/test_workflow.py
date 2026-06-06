@@ -169,6 +169,44 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(data["suggested_fields"]["unitValue"], 1600.0)
         self.assertEqual(data["suggested_fields"]["currency"], "SGD")
 
+    def test_chat_endpoint_extracts_seller_buyer_fields_for_confirmation(self):
+        client = TestClient(app)
+        with patch.dict("os.environ", {"OPENAI_API_KEY": ""}):
+            response = client.post(
+                "/api/chat",
+                json={
+                    "message": "200 iphones SGD 1600 each shipping Malaysia to Singapore seller Jason buyer Nora invoice TR-001",
+                    "destination_country": "Singapore",
+                },
+            )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["suggested_fields"]["quantity"], 200)
+        self.assertEqual(data["suggested_fields"]["unitValue"], 1600.0)
+        self.assertEqual(data["suggested_fields"]["currency"], "SGD")
+        self.assertEqual(data["suggested_fields"]["originCountry"], "Malaysia")
+        self.assertEqual(data["suggested_fields"]["sellerName"], "Jason")
+        self.assertEqual(data["suggested_fields"]["consigneeName"], "Nora")
+        self.assertEqual(data["suggested_fields"]["invoiceNumber"], "TR-001")
+
+    def test_chat_endpoint_extracts_invoice_number_after_is(self):
+        client = TestClient(app)
+        with patch.dict("os.environ", {"OPENAI_API_KEY": ""}):
+            response = client.post(
+                "/api/chat",
+                json={
+                    "message": 'I got 1000pcs of iphone 12, and the unit value is SGD1200, the invoice number is 123456, The seller is "Jason seller", Buyer is "Jason buyer"',
+                    "destination_country": "Malaysia",
+                },
+            )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["suggested_fields"]["quantity"], 1000)
+        self.assertEqual(data["suggested_fields"]["unitValue"], 1200.0)
+        self.assertEqual(data["suggested_fields"]["invoiceNumber"], "123456")
+        self.assertEqual(data["suggested_fields"]["sellerName"], "Jason seller")
+        self.assertEqual(data["suggested_fields"]["consigneeName"], "Jason buyer")
+
 
 if __name__ == "__main__":
     unittest.main()
