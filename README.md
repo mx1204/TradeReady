@@ -20,6 +20,28 @@ FastAPI backend for the Malaysia <-> Singapore electronics compliance demo.
 
 ## Run Locally
 
+**1. Clone the repo**
+```powershell
+git clone https://github.com/mx1204/TradeReady.git
+cd TradeReady
+```
+
+**2. Create a virtual environment and install dependencies**
+```powershell
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+**3. Set up your `.env` file** (see next section for details)
+
+**4. Start the app**
+```powershell
+.\start-tradeready.ps1
+```
+
+Then open `http://127.0.0.1:4174` in your browser.
+
 ## OpenAI API Key For Photo Analysis
 
 The API key belongs on the backend only. Do not paste it into `index.html` or any frontend JavaScript.
