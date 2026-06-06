@@ -9,8 +9,9 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from .agents import classification_agent, classification_preview_critic_agent, restriction_agent
+from .chat import chatbot_reply
 from .evidence import evidence_by_id
-from .models import ClassificationPreviewRequest, ClassificationPreviewResult, ComplianceRunRequest, SwitchDestinationRequest
+from .models import ChatRequest, ClassificationPreviewRequest, ClassificationPreviewResult, ComplianceRunRequest, SwitchDestinationRequest
 from .orchestrator import create_compliance_run, get_run, switch_destination
 from .vision import identify_product
 
@@ -81,6 +82,11 @@ def classification_preview(request: ClassificationPreviewRequest):
         evidence_pack=evidence_by_id(evidence_ids),
         critic=critic,
     )
+
+
+@app.post("/api/chat")
+def chat(request: ChatRequest):
+    return chatbot_reply(request)
 
 
 @app.post("/api/compliance-runs")

@@ -1207,6 +1207,34 @@
     .bubble.agent { background: #fff7f4; color: #333; border: 1px solid #ffd8cf; }
     .bubble.user { align-self: flex-end; color: #fff; background: var(--shop); }
 
+    .bubble.confirm {
+      background: #f4f9ff;
+      color: #15395d;
+      border: 1px solid #cfe2ff;
+    }
+
+    .confirm-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .confirm-actions button {
+      min-height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #fff;
+      padding: 0 10px;
+      font-weight: 800;
+    }
+
+    .confirm-actions .apply {
+      background: var(--shop);
+      color: #fff;
+      border-color: var(--shop);
+    }
+
     .quick {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -1226,7 +1254,7 @@
 
     .chat-form {
       display: grid;
-      grid-template-columns: 1fr 58px;
+      grid-template-columns: 1fr 44px 58px;
       gap: 8px;
       padding: 12px 14px 14px;
       border-top: 1px solid var(--line);
@@ -1242,6 +1270,21 @@
       color: #fff;
       background: var(--shop);
       font-weight: 800;
+    }
+
+    .voice-btn {
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: #333;
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .voice-btn.listening {
+      border-color: var(--shop);
+      color: var(--shop);
+      box-shadow: 0 0 0 3px rgba(238, 77, 45, .14);
     }
 
     @media (max-width: 820px) {
@@ -1511,6 +1554,7 @@
     </div>
     <form class="chat-form" id="chatForm">
       <textarea id="chatInput" placeholder="Ask: what certificate do I need for Malaysia?"></textarea>
+      <button class="voice-btn" id="voiceInput" type="button" aria-label="Use voice input" title="Use voice input">Mic</button>
       <button class="send" type="submit">Send</button>
     </form>
   </section>
@@ -1943,6 +1987,114 @@
       bubble.className = `bubble ${type}`;
       bubble.textContent = text;
       chatLog.appendChild(bubble);
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    function activeStepIndex() {
+      const active = document.querySelector(".screen.active");
+      return active ? Number(active.dataset.screen || 0) : 0;
+    }
+
+    function currentChatContext(message) {
+      return {
+        message,
+        destination_country: selectedCountry,
+        current_step: activeStepIndex(),
+        product_facts: compliancePackage?.product_facts || classificationPreview?.product_facts || detectedProductFacts || null,
+        classification: compliancePackage?.classification || classificationPreview?.classification || null,
+        critic: compliancePackage?.critic || classificationPreview?.critic || null,
+        evidence_pack: compliancePackage?.evidence_pack || classificationPreview?.evidence_pack || []
+      };
+    }
+
+    const chatFillLabels = {
+      productDescriptionInput: "Product description",
+      quantity: "Quantity",
+      unitValue: "Unit value",
+      currency: "Currency",
+      originCountry: "Origin country",
+      invoiceNumber: "Invoice number",
+      sellerName: "Seller / shipper",
+      consigneeName: "Consignee / buyer"
+    };
+
+    function summarizeSuggestedFields(fields) {
+      return Object.entries(fields)
+        .map(([id, value]) => `${chatFillLabels[id] || id}: ${value}`)
+        .join("\n");
+    }
+
+    function applySuggestedFields(fields) {
+      Object.entries(fields).forEach(([id, value]) => {
+        const input = document.getElementById(id);
+        if (!input || value === undefined || value === null || value === "") return;
+        input.value = String(value);
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      syncShipmentText();
+      renderAll();
+    }
+
+    function showFillConfirmation(fields) {
+      const entries = Object.entries(fields || {}).filter(([, value]) => value !== undefined && value !== null && value !== "");
+      if (!entries.length) return;
+      const cleanFields = Object.fromEntries(entries);
+      const bubble = document.createElement("div");
+      bubble.className = "bubble agent confirm";
+      const summary = document.createElement("div");
+      summary.textContent = `I can fill these fields:\n${summarizeSuggestedFields(cleanFields)}\n\nApply them to the form?`;
+      const actions = document.createElement("div");
+      actions.className = "confirm-actions";
+      const apply = document.createElement("button");
+      apply.type = "button";
+      apply.className = "apply";
+      apply.textContent = "Apply";
+      const ignore = document.createElement("button");
+      ignore.type = "button";
+      ignore.textContent = "Ignore";
+      apply.addEventListener("click", () => {
+        applySuggestedFields(cleanFields);
+        bubble.remove();
+        addBubble("agent", "Confirmed. I filled the form fields from your message.");
+      });
+      ignore.addEventListener("click", () => {
+        bubble.remove();
+        addBubble("agent", "No changes made to the form.");
+      });
+      actions.append(apply, ignore);
+      bubble.append(summary, actions);
+      chatLog.appendChild(bubble);
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    async function sendChatMessage(text) {
+      addBubble("user", text);
+      const pending = document.createElement("div");
+      pending.className = "bubble agent";
+      pending.textContent = "Thinking...";
+      chatLog.appendChild(pending);
+      chatLog.scrollTop = chatLog.scrollHeight;
+      try {
+        const response = await fetch(`${API_BASE}/api/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(currentChatContext(text))
+        });
+        if (!response.ok) {
+          let message = "Chatbot API failed.";
+          try {
+            const errorBody = await response.json();
+            message = errorBody.detail || message;
+          } catch (_) {}
+          throw new Error(message);
+        }
+        const data = await response.json();
+        pending.textContent = data.reply || "I could not generate a response.";
+        showFillConfirmation(data.suggested_fields);
+      } catch (error) {
+        pending.textContent = `Chatbot unavailable: ${error.message}`;
+      }
       chatLog.scrollTop = chatLog.scrollHeight;
     }
 
@@ -2665,32 +2817,47 @@
       });
     });
 
-    document.getElementById("chatForm").addEventListener("submit", event => {
+    document.getElementById("chatForm").addEventListener("submit", async event => {
       event.preventDefault();
       const input = document.getElementById("chatInput");
       const text = input.value.trim();
       if (!text) return;
       input.value = "";
-      addBubble("user", text);
-      const lower = text.toLowerCase();
-      Object.keys(countries).forEach(country => {
-        if (lower.includes(country.toLowerCase())) selectedCountry = country;
-      });
-      compliancePackage = null;
-      syncShipmentText();
-      renderAll();
-      if (lower.includes("certificate") || lower.includes("requirement") || lower.includes("sirim") || lower.includes("bpom")) {
-        goToStep(1);
-        addBubble("agent", hasDetectedProduct() ? `For ${product().name} entering ${selectedCountry}, you need: ${certificateName()}.` : "Please upload a product photo first so OpenAI vision can identify the product.");
-      } else if (lower.includes("fill") || lower.includes("registration")) {
-        goToStep(compliancePackage ? 2 : 1);
-        addBubble("agent", compliancePackage ? `I filled the registration form for ${certificateName()}.` : "I need a completed photo-based compliance run before filling the registration form.");
-      } else if (lower.includes("document") || lower.includes("pdf") || lower.includes("submit")) {
-        goToStep(compliancePackage ? 3 : 1);
-        addBubble("agent", compliancePackage ? "I prepared the documents and PDF pack." : "Run photo detection and compliance first; then I can generate the document pack.");
-      } else {
-        addBubble("agent", `I updated your market and product context. Current destination: ${selectedCountry}.`);
+      await sendChatMessage(text);
+    });
+
+    document.getElementById("voiceInput").addEventListener("click", () => {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const voiceButton = document.getElementById("voiceInput");
+      const input = document.getElementById("chatInput");
+      if (!SpeechRecognition) {
+        addBubble("agent", "Voice input is not supported in this browser. Please type your message instead.");
+        return;
       }
+      const recognition = new SpeechRecognition();
+      recognition.lang = "en-SG";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      voiceButton.classList.add("listening");
+      voiceButton.textContent = "On";
+      addBubble("agent", "Listening. Please ask your question.");
+      recognition.onresult = event => {
+        const transcript = event.results?.[0]?.[0]?.transcript || "";
+        if (transcript.trim()) {
+          input.value = "";
+          sendChatMessage(transcript.trim());
+        } else {
+          input.focus();
+        }
+      };
+      recognition.onerror = event => {
+        addBubble("agent", `Voice input stopped: ${event.error || "unknown error"}.`);
+      };
+      recognition.onend = () => {
+        voiceButton.classList.remove("listening");
+        voiceButton.textContent = "Mic";
+      };
+      recognition.start();
     });
 
     document.getElementById("downloadPdf").addEventListener("click", () => {

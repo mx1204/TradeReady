@@ -85,6 +85,22 @@ class EvidenceItem(BaseModel):
     tags: list[str] = Field(default_factory=list)
 
 
+class ChatRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=2000)
+    destination_country: str | None = None
+    current_step: int | None = None
+    product_facts: ProductFacts | None = None
+    classification: dict[str, Any] | None = None
+    critic: dict[str, Any] | None = None
+    evidence_pack: list[EvidenceItem] = Field(default_factory=list)
+
+
+class ChatResponse(BaseModel):
+    reply: str
+    source: Literal["openai", "local_fallback"]
+    suggested_fields: dict[str, Any] = Field(default_factory=dict)
+
+
 class ClassificationResult(BaseModel):
     hs6: str
     local_code: str

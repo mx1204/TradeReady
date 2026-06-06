@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -129,6 +130,44 @@ class WorkflowTests(unittest.TestCase):
         self.assertIsInstance(result, CompliancePackage)
         self.assertEqual(result.classification.hs6, "8517.13")
         self.assertIn("SIRIM QAS", result.restricted_goods.certification_bodies)
+
+    def test_chat_endpoint_answers_from_trade_context_without_network(self):
+        client = TestClient(app)
+        with patch.dict("os.environ", {"OPENAI_API_KEY": ""}):
+            response = client.post(
+                "/api/chat",
+                json={
+                    "message": "Where does the HS code come from? quantity is 200 and unit value is 1600 SGD",
+                    "destination_country": "Singapore",
+                    "current_step": 2,
+                    "product_facts": {
+                        "category": "smartphone",
+                        "label": "Apple iPhone 12",
+                        "wireless": True,
+                        "battery": True,
+                        "mains_powered": False,
+                        "confidence": 0.91,
+                        "source": "openai_vision",
+                        "confirmed": True,
+                    },
+                    "classification": {
+                        "hs6": "8517.13",
+                        "local_code": "85171300",
+                    },
+                    "critic": {
+                        "status": "pass",
+                        "issues": [],
+                        "checks": ["HS classification has cached source evidence."],
+                    },
+                },
+            )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["source"], "local_fallback")
+        self.assertIn("8517.13", data["reply"])
+        self.assertEqual(data["suggested_fields"]["quantity"], 200)
+        self.assertEqual(data["suggested_fields"]["unitValue"], 1600.0)
+        self.assertEqual(data["suggested_fields"]["currency"], "SGD")
 
 
 if __name__ == "__main__":
