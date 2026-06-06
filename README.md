@@ -36,12 +36,22 @@ pip install -r requirements.txt
 
 **3. Set up your `.env` file** (see next section for details)
 
-**4. Start the app**
+**4. Start the backend** — run this from the project root (`TradeReady/`):
 ```powershell
-.\start-tradeready.ps1
+python -m uvicorn backend.tradeready.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+Keep this terminal open. The backend runs at `http://127.0.0.1:8000`.
+
+**5. Start the frontend** — open a second terminal, also from the project root:
+```powershell
+cd "frontend\frontend design\2026-06-06\files-mentioned-by-the-user-tradeready\outputs\tradeready-executable"
+python -m http.server 4174 --bind 127.0.0.1
 ```
 
 Then open `http://127.0.0.1:4174` in your browser.
+
+> **Important:** Both commands must be run from the project root (`TradeReady/`). Running from a subfolder will cause a `ModuleNotFoundError: No module named 'backend'` error.
 
 ## OpenAI API Key For Photo Analysis
 
